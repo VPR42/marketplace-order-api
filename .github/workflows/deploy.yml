@@ -1,0 +1,132 @@
+name: Маркетплейс услуг (.NET)
+
+on:
+  push: {}   # каждый коммит, все ветки
+
+env:
+  DOTNET_VERSION: '8.0.0'
+  TARGET_DIR: /home/kinoko/marketplace/module-name
+  BACKUP_DIR: /home/kinoko/backup/module-name
+  PUBLISH_DIR: /tmp/marketplace/module-name/publish
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: |
+          if ls **/*.csproj | grep -qi test; then
+            dotnet test --no-build -c Release
+          else
+            echo "Тестовых проектов не найдено — пропускаю"
+          fi
+
+      - name: Publish (self-contained = false)
+        run: |
+          mkdir -p ./publish
+          # Если у тебя солюшен — укажи стартовый проект через -p:PublishSingleFile=false
+          dotnet publish -c Release -o ./publish
+
+      - name: Upload artifacts
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-publish
+          path: publish/**
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted
+    needs: build
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Create backup of current deployment
+        run: |
+          if [ -e "${{ env.TARGET_DIR }}" ]; then
+            sudo mkdir -p "${{ env.BACKUP_DIR }}"
+            sudo cp -r "${{ env.TARGET_DIR }}" "${{ env.BACKUP_DIR }}"
+            echo "Backup created at ${{ env.BACKUP_DIR }}"
+          else
+            echo "Деплоев ещё не было. Бэкапа не буит."
+          fi
+
+      - name: Stop and remove existing containers
+        run: |
+          if [ -f "${{ env.TARGET_DIR }}/docker-compose.yml" ]; then
+            docker compose -f "${{ env.TARGET_DIR }}/docker-compose.yml" down || true
+          fi
+
+      - name: Clean target directory
+        run: sudo rm -rf "${{ env.TARGET_DIR }}" && sudo mkdir -p "${{ env.TARGET_DIR }}"
+
+      - name: Copy project files
+        run: |
+          sudo cp -r ./* "${{ env.TARGET_DIR }}"
+          sudo chown -R kinoko:kinoko "${{ env.TARGET_DIR }}"
+
+      - name: Download published files
+        uses: actions/download-artifact@v5
+        with:
+          name: app-publish
+          path: ${{ env.PUBLISH_DIR }}
+
+      - name: Copy publish to server
+        run: |
+          sudo mkdir -p "${{ env.TARGET_DIR }}/publish"
+          sudo cp -r "${{ env.PUBLISH_DIR }}"/* "${{ env.TARGET_DIR }}/publish/"
+          sudo rm -rf "${{ env.PUBLISH_DIR }}"
+
+      - name: Build and deploy with Docker Compose
+        run: |
+          if [ -f "${{ env.TARGET_DIR }}/docker-compose.yml" ]; then
+            docker compose -f "${{ env.TARGET_DIR }}/docker-compose.yml" rm -f || true
+          fi
+          docker compose -f "${{ env.TARGET_DIR }}/docker-compose.yml" up --build -d
+          sleep 60
+          # По аналогии — проверяем ERRORS (регистронезависимо)
+          if docker compose -f "${{ env.TARGET_DIR }}/docker-compose.yml" logs | grep -Eiq "error"; then
+            echo "Ошибка деплоя. В логах найдены ошибки:"
+            docker compose -f "${{ env.TARGET_DIR }}/docker-compose.yml" logs | grep -Eni "error"
+            exit 1
+          else
+            echo "Ошибок в логах не найдено. Деплой успешен."
+          fi
+
+      - name: Confirm deployment
+        run: |
+          sudo rm -rf "${{ env.BACKUP_DIR }}"
+          echo "Деплой окончен"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Ошибка деплоя. Откат на предыдущую версию..."
+          if [ -f "${{ env.TARGET_DIR }}/docker-compose.yml" ]; then
+            docker compose -f "${{ env.TARGET_DIR }}/docker-compose.yml" down || true
+          fi
+          sudo rm -rf "${{ env.TARGET_DIR }}"
+          if [ -d "${{ env.BACKUP_DIR }}" ]; then
+            sudo mv "${{ env.BACKUP_DIR }}" "${{ env.TARGET_DIR }}"
+            sudo chown -R kinoko:kinoko "${{ env.TARGET_DIR }}"
+            docker compose -f "${{ env.TARGET_DIR }}/docker-compose.yml" up -d
+            echo "Откат на предыдущую версию успешен"
+          else
+            echo "Бэкап не найден. Отката не буит."
+          fi

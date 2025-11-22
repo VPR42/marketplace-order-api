@@ -1,0 +1,18 @@
+services:
+  module-name:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    image: module-name
+    container_name: module-name
+    restart: always
+    volumes:
+      - /home/kinoko/logs/module-name:/app/logs
+    networks:
+      - backend
+    ports:
+      - "33300:33300"
+
+networks:
+  backend:
+    external: true
