@@ -4,10 +4,10 @@ on:
   push: {}   # каждый коммит, все ветки
 
 env:
-  DOTNET_VERSION: '8.0.0'
-  TARGET_DIR: /home/kinoko/marketplace/module-name
-  BACKUP_DIR: /home/kinoko/backup/module-name
-  PUBLISH_DIR: /tmp/marketplace/module-name/publish
+  DOTNET_VERSION: '9.0.x'
+  TARGET_DIR: /home/kinoko/marketplace/markplace-orders-api
+  BACKUP_DIR: /home/kinoko/backup/markplace-orders-api
+  PUBLISH_DIR: /tmp/marketplace/markplace-orders-api/publish
 
 jobs:
   build:
