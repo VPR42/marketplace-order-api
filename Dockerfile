@@ -1,5 +1,4 @@
-# Рантайм .NET 8 (ASP.NET)
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY ./publish/ ./
 EXPOSE 33308
