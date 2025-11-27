@@ -15,11 +15,13 @@ public class OrdersController : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
+    private readonly IOrderEventsPublisher _orderEventsPublisher;
 
-    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService)
+    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
+        _orderEventsPublisher = orderEventsPublisher;
     }
 
     // POST /api/orders
@@ -37,12 +39,14 @@ public class OrdersController : ControllerBase
         {
             UserId = request.UserId,
             JobId = request.JobId,
-            Status = OrderStatus.CREATED.ToString(),
+            Status = OrderStatus.CREATED.ToString(), // отошлет именно CREATED
             OrderedAt = DateTime.UtcNow
         };
 
         _dbContext.Orders.Add(order);
         await _dbContext.SaveChangesAsync();
+
+        await _orderEventsPublisher.PublishOrderCreatedAsync(order);
 
         return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
     }
@@ -51,8 +55,7 @@ public class OrdersController : ControllerBase
     public async Task<ActionResult<Order>> GetOrderById(long id)
     {
         var order = await _dbContext.Orders.FindAsync(id);
-        if (order == null)
-            return NotFound();
+        if (order == null) return NotFound();
 
         return order;
     }
