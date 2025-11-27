@@ -15,11 +15,13 @@ public class OrdersController : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
+    private readonly IOrderEventsPublisher _orderEventsPublisher;
 
-    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService)
+    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
+        _orderEventsPublisher = orderEventsPublisher;
     }
 
     // POST /api/orders
@@ -69,15 +71,19 @@ public class OrdersController : ControllerBase
         var currentStatus = order.Status;
         var newStatus = (request.Status).ToString();
 
-        if (!_orderStatusService.IsValidStatus(newStatus))
-            return BadRequest($"Status '{newStatus}' is invalid.");
+        if (!_orderStatusService.IsValidStatus(newStatus)) return BadRequest($"Status '{newStatus}' is invalid.");
+        if (!_orderStatusService.CanTransition(currentStatus, newStatus)) return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
 
-        if (!_orderStatusService.CanTransition(currentStatus, newStatus))
-            return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
+        var closingStatuses = new[] { OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.REJECTED };
+        var newStatusEnum = request.Status;
+        var wasClosing = closingStatuses.Contains(newStatusEnum);
 
         order.Status = newStatus.ToUpperInvariant();
 
         await _dbContext.SaveChangesAsync();
+
+        if (wasClosing) await _orderEventsPublisher.PublishOrderClosedAsync(order);
+
         return order;
     }
 
