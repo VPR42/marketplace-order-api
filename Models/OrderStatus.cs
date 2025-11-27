@@ -18,8 +18,8 @@ public enum OrderStatus
     [StatusInfo(0, "Создан")]
     CREATED,
 
-    [StatusInfo(1, "Оплачен")]
-    PAID,
+    [StatusInfo(1, "В работе")]
+    WORKING,
 
     [StatusInfo(2, "Завершен")]
     COMPLETED,
