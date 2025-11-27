@@ -5,6 +5,7 @@ using MarketPlace.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace MarketPlace.Controllers;
 
@@ -15,6 +16,7 @@ public class OrdersController : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
+    private readonly OrderService _orderService;
 
     public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService)
     {
@@ -82,6 +84,17 @@ public class OrdersController : ControllerBase
 
 
     }
-    //[HttpGet("GetLastOrders")]
-    //public async Task<IActionResult> GetLastOrders([From])
+    [HttpGet("GetLastOrders")]
+    public async Task<IActionResult> GetLastOrders()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+
+        if (userId == null || userEmail == null)
+            return Unauthorized();
+
+        var lastOrders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
+
+        return Ok(lastOrders);
+    }
 }
