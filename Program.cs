@@ -1,6 +1,7 @@
 using MarketPlace.Data;
 using MarketPlace.Services;
 using Microsoft.EntityFrameworkCore;
+using Steeltoe.Discovery.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
 
 app.UseHttpsRedirection();
 
