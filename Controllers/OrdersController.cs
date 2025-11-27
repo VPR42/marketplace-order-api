@@ -35,7 +35,7 @@ public class OrdersController : ControllerBase
         {
             UserId = request.UserId,
             JobId = request.JobId,
-            Status = "created",
+            Status = "CREATED",
             OrderedAt = DateTime.UtcNow
         };
 
