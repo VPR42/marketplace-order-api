@@ -1,8 +1,10 @@
-﻿namespace MarketPlace.DTO
+﻿using MarketPlace.Models;
+
+namespace MarketPlace.DTO
 {
-    // PATCH /api/orders/{id}/status
+    // PUT /api/orders/{id}/status
     public class ChangeOrderStatusRequest
     {
-        public string Status { get; set; } = null!;
+        public OrderStatus Status { get; set; };
     }
 }

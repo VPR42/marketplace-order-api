@@ -1,51 +1,34 @@
-﻿using System.Globalization;
+﻿using MarketPlace.Models;
 
 namespace MarketPlace.Services;
 
 public class OrderStatusService : IOrderStatusService
 {
-    private static readonly HashSet<string> ValidStatuses = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<OrderStatus, OrderStatus[]> AllowedTransitions = new()
     {
-        "created",
-        "paid",
-        "completed",
-        "cancelled"
+        [OrderStatus.CREATED] = new[] { OrderStatus.PAID, OrderStatus.CANCELLED, OrderStatus.REJECTED },
+        [OrderStatus.PAID] = new[] { OrderStatus.COMPLETED },
+        [OrderStatus.COMPLETED] = Array.Empty<OrderStatus>(),
+        [OrderStatus.CANCELLED] = Array.Empty<OrderStatus>(),
+        [OrderStatus.REJECTED] = Array.Empty<OrderStatus>()
     };
-
-    private static readonly Dictionary<string, string[]> AllowedTransitions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ["created"] = new[] { "paid", "cancelled" },
-            ["paid"] = new[] { "completed" },
-            ["completed"] = Array.Empty<string>(),
-            ["cancelled"] = Array.Empty<string>()
-        };
 
     public bool IsValidStatus(string status)
     {
-        if (string.IsNullOrWhiteSpace(status))
-            return false;
-
-        return ValidStatuses.Contains(Normalize(status));
+        return OrderStatusExtensions.TryParse(status, out _);
     }
 
     public bool CanTransition(string currentStatus, string newStatus)
     {
-        if (!IsValidStatus(currentStatus) || !IsValidStatus(newStatus))
+        if (!OrderStatusExtensions.TryParse(currentStatus, out var current))
             return false;
 
-        var current = Normalize(currentStatus);
-        var target = Normalize(newStatus);
+        if (!OrderStatusExtensions.TryParse(newStatus, out var target))
+            return false;
 
-        if (current == target) // если совпадают то норм
+        if (current == target)
             return true;
 
-        if (!AllowedTransitions.TryGetValue(current, out var allowedTargets))
-            return false;
-
-        return allowedTargets.Any(s => Normalize(s) == target);
+        return AllowedTransitions[current].Contains(target);
     }
-
-    private static string Normalize(string status) =>
-        status.Trim().ToLower(CultureInfo.InvariantCulture);
 }

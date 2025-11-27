@@ -29,7 +29,7 @@ public class OrdersController : ControllerBase
         if (order == null) return NotFound();
 
         var currentStatus = order.Status;
-        var newStatus = request.Status;
+        var newStatus = (request.Status).ToString();
 
         if (!_orderStatusService.IsValidStatus(newStatus))
             return BadRequest($"Status '{newStatus}' is invalid.");
@@ -37,9 +37,9 @@ public class OrdersController : ControllerBase
         if (!_orderStatusService.CanTransition(currentStatus, newStatus))
             return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
 
-        order.Status = newStatus.Trim().ToLowerInvariant();
-        await _dbContext.SaveChangesAsync();
+        order.Status = newStatus.ToUpperInvariant();
 
+        await _dbContext.SaveChangesAsync();
         return order;
     }
 }
