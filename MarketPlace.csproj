@@ -19,6 +19,7 @@
     </PackageReference>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
     <PackageReference Include="Steeltoe.Discovery.ClientCore" Version="3.2.8" />
+    <PackageReference Include="Steeltoe.Discovery.Eureka" Version="3.2.8" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
