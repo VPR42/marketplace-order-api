@@ -2,11 +2,13 @@
 using MarketPlace.DTO;
 using MarketPlace.Models;
 using MarketPlace.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarketPlace.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
@@ -77,5 +79,9 @@ public class OrdersController : ControllerBase
 
         await _dbContext.SaveChangesAsync();
         return order;
+
+
     }
+    //[HttpGet("GetLastOrders")]
+    //public async Task<IActionResult> GetLastOrders([From])
 }

@@ -24,6 +24,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
+app.UseMiddleware<GatewayUserMiddleware>();
 
 app.UseHttpsRedirection();
 
