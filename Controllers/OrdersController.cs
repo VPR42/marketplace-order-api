@@ -9,7 +9,6 @@ using System.Security.Claims;
 
 namespace MarketPlace.Controllers;
 
-[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
@@ -18,10 +17,11 @@ public class OrdersController : ControllerBase
     private readonly IOrderStatusService _orderStatusService;
     private readonly OrderService _orderService;
 
-    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService)
+    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, OrderService orderService)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
+        _orderService = orderService;
     }
 
     // POST /api/orders
@@ -90,11 +90,11 @@ public class OrdersController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var userEmail = User.FindFirstValue(ClaimTypes.Email);
 
-        if (userId == null || userEmail == null)
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
             return Unauthorized();
 
-        var lastOrders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
 
-        return Ok(lastOrders);
+        var orders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
+        return Ok(orders);
     }
 }
