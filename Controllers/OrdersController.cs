@@ -2,8 +2,10 @@
 using MarketPlace.DTO;
 using MarketPlace.Models;
 using MarketPlace.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace MarketPlace.Controllers;
 
@@ -77,5 +79,16 @@ public class OrdersController : ControllerBase
 
         await _dbContext.SaveChangesAsync();
         return order;
+    }
+
+    [HttpGet]
+    [Authorize]
+    [Route("test")]
+    public ActionResult<string?> Test()
+    {
+        var id = HttpContext.User.Claims
+            .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+        return id;
     }
 }

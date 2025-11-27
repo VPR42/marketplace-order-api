@@ -19,10 +19,9 @@ builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddSingleton<HeaderAuthenticationMiddleware>();
 
 builder.Services.AddAuthentication("custom")
-    .AddScheme<AuthenticationSchemeOptions, EmptyAuthHandler>("custom", options => { });
+    .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>("custom", options => { });
 
 builder.Services.AddAuthorization(options =>
 {
@@ -46,7 +45,6 @@ app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
-app.UseMiddleware<HeaderAuthenticationMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
