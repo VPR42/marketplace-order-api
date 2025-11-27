@@ -19,8 +19,8 @@ public class OrdersController : ControllerBase
         _orderStatusService = orderStatusService;
     }
 
-    // PATCH /api/orders/{id}/status
-    [HttpPatch("{id:long}/status")]
+    // PUT /api/orders/{id}/status
+    [HttpPut("{id:long}/status")]
     public async Task<ActionResult<Order>> ChangeStatus(
         long id,
         [FromBody] ChangeOrderStatusRequest request)
