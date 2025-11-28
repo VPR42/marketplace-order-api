@@ -128,6 +128,55 @@ public class OrdersController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Возвращает полную информацию о заказе: данные заказа, пользователя и города.
+    /// </summary>
+    /// <remarks>
+    /// Пример запроса:
+    ///
+    ///     GET /api/orders/12/details
+    ///
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <returns>Полная информация о заказе.</returns>
+    /// <response code="200">Информация о заказе успешно получена</response>
+    /// <response code="404">Заказ не найден</response>
+    [HttpGet("{id:long}/details")]
+    [ProducesResponseType(typeof(OrderDetailsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrderDetailsResponse>> GetOrderDetails(long id)
+    {
+        var order = await _dbContext.Orders.AsNoTracking().Include(o => o.User).ThenInclude(u => u.CityNavigation).FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order is null) return NotFound();
+
+        var user = order.User;
+        var city = user.CityNavigation;
+
+        var response = new OrderDetailsResponse
+        {
+            Id = order.Id,
+
+            JobId = order.JobId,
+            Status = order.Status,
+            OrderedAt = order.OrderedAt,
+            StatusChangedAt = order.StatusChangedAt,
+
+            UserId = user.Id,
+            UserSurname = user.Surname,
+            UserName = user.Name,
+            UserPatronymic = user.Patronymic,
+            UserEmail = user.Email,
+            UserAvatarPath = user.AvatarPath,
+
+            CityId = city.Id,
+            CityName = city.Name,
+            CityRegion = city.Region
+        };
+
+        return Ok(response);
+    }
+
     [HttpGet]
     [Authorize]
     [Route("test")]
