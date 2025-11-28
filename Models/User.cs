@@ -53,12 +53,6 @@ public partial class User
     [InverseProperty("Master")]
     public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
 
-    [InverseProperty("Customer")]
-    public virtual ICollection<Message> MessageCustomers { get; set; } = new List<Message>();
-
-    [InverseProperty("Master")]
-    public virtual ICollection<Message> MessageMasters { get; set; } = new List<Message>();
-
     [InverseProperty("User")]
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

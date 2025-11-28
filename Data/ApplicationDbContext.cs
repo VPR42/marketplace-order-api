@@ -22,15 +22,11 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Favourite> Favourites { get; set; }
 
-    public virtual DbSet<FlywaySchemaHistory> FlywaySchemaHistories { get; set; }
-
     public virtual DbSet<Job> Jobs { get; set; }
 
     public virtual DbSet<MasterSkill> MasterSkills { get; set; }
 
     public virtual DbSet<MastersInfo> MastersInfos { get; set; }
-
-    public virtual DbSet<Message> Messages { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
 
@@ -40,9 +36,6 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Host=kinoko.su;Port=5432;Database=mp_db_dev;Username=mp_dev_user;Password=mp_dev_passwd");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -67,13 +60,6 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.Favourites).HasConstraintName("favourites_user_id_fkey");
         });
 
-        modelBuilder.Entity<FlywaySchemaHistory>(entity =>
-        {
-            entity.HasKey(e => e.InstalledRank).HasName("flyway_schema_history_pk");
-
-            entity.Property(e => e.InstalledRank).ValueGeneratedNever();
-            entity.Property(e => e.InstalledOn).HasDefaultValueSql("now()");
-        });
 
         modelBuilder.Entity<Job>(entity =>
         {
@@ -120,20 +106,6 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Master).WithMany().HasConstraintName("masters_info_master_id_fkey");
         });
 
-        modelBuilder.Entity<Message>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("messages_pkey");
-
-            entity.Property(e => e.Id).ValueGeneratedNever();
-
-            entity.HasOne(d => d.Customer).WithMany(p => p.MessageCustomers)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("messages_second_user_fkey");
-
-            entity.HasOne(d => d.Master).WithMany(p => p.MessageMasters)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("messages_first_user_fkey");
-        });
 
         modelBuilder.Entity<Order>(entity =>
         {
