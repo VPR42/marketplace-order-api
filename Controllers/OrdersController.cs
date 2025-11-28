@@ -45,15 +45,15 @@ public class OrdersController : ControllerBase
         _dbContext.Orders.Add(order);
         await _dbContext.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
+        return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
     }
 
+    // Нужен имеено для создания
     [HttpGet("{id:long}")]
-    public async Task<ActionResult<Order>> GetOrderById(long id)
+    public async Task<ActionResult<Order>> GetOrderId(long id)
     {
         var order = await _dbContext.Orders.FindAsync(id);
-        if (order == null)
-            return NotFound();
+        if (order == null) return NotFound();
 
         return order;
     }
@@ -86,14 +86,38 @@ public class OrdersController : ControllerBase
         return order;
     }
 
+    // GET /api/orders/{id}
+    [HttpGet("{id:long}")]
+    [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrderResponse>> GetOrderById(long id)
+    {
+        var order = await _dbContext.Orders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order is null)
+            return NotFound();
+
+        var response = new OrderResponse
+        {
+            Id = order.Id,
+            UserId = order.UserId,
+            JobId = order.JobId,
+            Status = order.Status,
+            OrderedAt = order.OrderedAt,
+            StatusChangedAt = order.StatusChangedAt
+        };
+
+        return Ok(response);
+    }
+
     [HttpGet]
     [Authorize]
     [Route("test")]
     public ActionResult<string?> Test()
     {
-        var id = HttpContext.User.Claims
-            .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-
+        var id = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
         return id;
     }
 }
