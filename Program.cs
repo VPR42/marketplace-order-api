@@ -16,6 +16,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
+builder.Services.AddScoped<OrderService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -41,6 +42,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
+app.UseMiddleware<GatewayUserMiddleware>();
 
 app.UseHttpsRedirection();
 
