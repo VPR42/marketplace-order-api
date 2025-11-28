@@ -16,12 +16,14 @@ public class OrdersController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
     private readonly IOrderEventsPublisher _orderEventsPublisher;
+    private readonly OrderService _orderService;
 
     public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
         _orderEventsPublisher = orderEventsPublisher;
+        _orderService = orderService;
     }
 
     // POST /api/orders
@@ -39,8 +41,9 @@ public class OrdersController : ControllerBase
         {
             UserId = request.UserId,
             JobId = request.JobId,
-            Status = OrderStatus.CREATED.ToString(), // отошлет именно CREATED
-            OrderedAt = DateTime.UtcNow
+            Status = OrderStatus.CREATED.ToString(),
+            OrderedAt = DateTime.UtcNow,
+            StatusChangedAt = DateTime.UtcNow
         };
 
         _dbContext.Orders.Add(order);
@@ -48,11 +51,11 @@ public class OrdersController : ControllerBase
 
         await _orderEventsPublisher.PublishOrderCreatedAsync(order);
 
-        return CreatedAtAction(nameof(GetOrderById), new { id = order.Id }, order);
+        return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
     }
 
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<Order>> GetOrderById(long id)
+    // Нужен именно для создания
+    private async Task<ActionResult<Order>> GetOrderId(long id)
     {
         var order = await _dbContext.Orders.FindAsync(id);
         if (order == null) return NotFound();
@@ -78,10 +81,55 @@ public class OrdersController : ControllerBase
         if (!_orderStatusService.CanTransition(currentStatus, newStatus))
             return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
 
-        order.Status = newStatus.ToUpperInvariant();
+        if (!string.Equals(currentStatus, newStatus.ToUpperInvariant(), StringComparison.OrdinalIgnoreCase))
+        {
+            order.Status = newStatus.ToUpperInvariant();
+            order.StatusChangedAt = DateTime.UtcNow;
+        }
 
         await _dbContext.SaveChangesAsync();
         return order;
+
+
+    }
+    [HttpGet("GetLastOrders")]
+    public async Task<IActionResult> GetLastOrders()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
+            return Unauthorized();
+
+
+        var orders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
+        return Ok(orders);
+    }
+
+    // GET /api/orders/{id}
+    [HttpGet("{id:long}")]
+    [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<OrderResponse>> GetOrderById(long id)
+    {
+        var order = await _dbContext.Orders
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order is null)
+            return NotFound();
+
+        var response = new OrderResponse
+        {
+            Id = order.Id,
+            UserId = order.UserId,
+            JobId = order.JobId,
+            Status = order.Status,
+            OrderedAt = order.OrderedAt,
+            StatusChangedAt = order.StatusChangedAt
+        };
+
+        return Ok(response);
     }
 
     [HttpGet]
@@ -89,9 +137,7 @@ public class OrdersController : ControllerBase
     [Route("test")]
     public ActionResult<string?> Test()
     {
-        var id = HttpContext.User.Claims
-            .FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-
+        var id = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
         return id;
     }
 }

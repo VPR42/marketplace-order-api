@@ -19,6 +19,7 @@ builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("R
 builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublisher>();
 
 builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
+builder.Services.AddScoped<OrderService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -44,6 +45,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
+app.UseMiddleware<GatewayUserMiddleware>();
 
 app.UseHttpsRedirection();
 
