@@ -16,6 +16,7 @@ public class OrdersController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
     private readonly IOrderEventsPublisher _orderEventsPublisher;
+    private readonly OrderService _orderService;
 
     public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher)
     {
@@ -23,7 +24,7 @@ public class OrdersController : ControllerBase
         _orderStatusService = orderStatusService;
         _orderEventsPublisher = orderEventsPublisher;
         _orderService = orderService;
-    private readonly OrderService _orderService;
+    }
 
     // POST /api/orders
     [HttpPost]
