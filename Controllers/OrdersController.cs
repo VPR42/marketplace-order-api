@@ -48,9 +48,8 @@ public class OrdersController : ControllerBase
         return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
     }
 
-    // Нужен имеено для создания
-    [HttpGet("{id:long}")]
-    public async Task<ActionResult<Order>> GetOrderId(long id)
+    // Нужен именно для создания
+    private async Task<ActionResult<Order>> GetOrderId(long id)
     {
         var order = await _dbContext.Orders.FindAsync(id);
         if (order == null) return NotFound();
