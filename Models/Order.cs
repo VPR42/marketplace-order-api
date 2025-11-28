@@ -26,6 +26,9 @@ public partial class Order
     [Column("ordered_at")]
     public DateTime OrderedAt { get; set; }
 
+    [Column("status_changed_at")]
+    public DateTime? StatusChangedAt { get; set; }
+
     [ForeignKey("UserId")]
     [InverseProperty("Orders")]
     public virtual User User { get; set; } = null!;

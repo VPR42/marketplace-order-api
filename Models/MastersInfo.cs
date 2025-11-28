@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,9 +27,19 @@ public partial class MastersInfo
     [StringLength(10)]
     public string PhoneNumber { get; set; } = null!;
 
-    [Column("working_hours")]
-    [StringLength(25)]
-    public string? WorkingHours { get; set; }
+    [Column("about")]
+    public string? About { get; set; }
+
+    [Column("days_of_week")]
+    public int[]? DaysOfWeek { get; set; }
+
+    [Column("start_time")]
+    [StringLength(5)]
+    public string? StartTime { get; set; }
+
+    [Column("end_time")]
+    [StringLength(5)]
+    public string? EndTime { get; set; }
 
     [ForeignKey("MasterId")]
     public virtual User Master { get; set; } = null!;

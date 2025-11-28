@@ -38,7 +38,8 @@ public class OrdersController : ControllerBase
             UserId = request.UserId,
             JobId = request.JobId,
             Status = OrderStatus.CREATED.ToString(),
-            OrderedAt = DateTime.UtcNow
+            OrderedAt = DateTime.UtcNow,
+            StatusChangedAt = DateTime.UtcNow
         };
 
         _dbContext.Orders.Add(order);
@@ -75,7 +76,11 @@ public class OrdersController : ControllerBase
         if (!_orderStatusService.CanTransition(currentStatus, newStatus))
             return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
 
-        order.Status = newStatus.ToUpperInvariant();
+        if (!string.Equals(currentStatus, newStatus.ToUpperInvariant(), StringComparison.OrdinalIgnoreCase))
+        {
+            order.Status = newStatus.ToUpperInvariant();
+            order.StatusChangedAt = DateTime.UtcNow;
+        }
 
         await _dbContext.SaveChangesAsync();
         return order;
