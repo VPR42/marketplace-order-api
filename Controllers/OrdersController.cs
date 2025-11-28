@@ -18,7 +18,7 @@ public class OrdersController : ControllerBase
     private readonly IOrderEventsPublisher _orderEventsPublisher;
     private readonly OrderService _orderService;
 
-    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher)
+    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher,  OrderService orderService)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
