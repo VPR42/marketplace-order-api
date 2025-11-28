@@ -17,4 +17,7 @@ public partial class Category
     [Column("name")]
     [StringLength(55)]
     public string Name { get; set; } = null!;
+
+    [InverseProperty("Category")]
+    public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
 }
