@@ -128,6 +128,49 @@ public class OrdersController : ControllerBase
         return Ok(response);
     }
 
+    /// <summary>
+    /// Редактирует заказ.
+    /// </summary>
+    /// <remarks>
+    /// Разрешено редактировать только заказы в статусе <c>CREATED</c>.
+    ///
+    /// Пример запроса:
+    ///
+    ///     PUT /api/orders/12
+    ///     {
+    ///         "jobId": "2c2a4e21-9c00-4a59-9d38-6756b1f005f3"
+    ///     }
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <param name="request">Новые параметры заказа.</param>
+    /// <returns>Обновлённый заказ.</returns>
+    /// <response code="200">Заказ успешно отредактирован</response>
+    /// <response code="400">Редактирование невозможно (неподходящий статус или некорректные данные)</response>
+    /// <response code="404">Заказ не найден</response>
+    [HttpPut("{id:long}")]
+    [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<Order>> UpdateOrder(
+        long id,
+        [FromBody] UpdateOrderRequest request)
+    {
+        var order = await _dbContext.Orders.FindAsync(id);
+        if (order is null)
+            return NotFound();
+
+        // Разрешено редактировать только когда CREATED
+        if (!string.Equals(order.Status, OrderStatus.CREATED.ToString(), StringComparison.OrdinalIgnoreCase))
+            return BadRequest("Only orders in status 'CREATED' can be edited.");
+
+        order.JobId = request.JobId;
+        order.StatusChangedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return Ok(order);
+    }
+
     [HttpGet]
     [Authorize]
     [Route("test")]
