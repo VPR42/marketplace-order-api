@@ -24,8 +24,30 @@ public class OrdersController : ControllerBase
         _orderService = orderService;
     }
 
-    // POST /api/orders
+    /// <summary>
+    /// Создаёт новый заказ.
+    /// </summary>
+    /// <remarks>
+    /// Пример запроса:
+    ///
+    ///     POST /api/orders
+    ///     {
+    ///         "userId": "9fa85f64-5717-4562-b3fc-2c963f66afa6",
+    ///         "jobId":  "2c2a4e21-9c00-4a59-9d38-6756b1f005f3"
+    ///     }
+    ///
+    /// Требования:
+    /// - Пользователь с указанным <c>UserId</c> должен существовать.
+    /// - Заказ создаётся со статусом <c>CREATED</c>.
+    /// - Поле <c>StatusChangedAt</c> автоматически устанавливается.
+    /// </remarks>
+    /// <param name="request">Данные для создания заказа.</param>
+    /// <returns>Созданный заказ и ссылка на эндпоинт его получения.</returns>
+    /// <response code="201">Заказ успешно создан</response>
+    /// <response code="400">Пользователь не существует или запрос некорректен</response>
     [HttpPost]
+    [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Order>> CreateOrder([FromBody] CreateOrderRequest request)
     {
         var userExists = await _dbContext.Users.AnyAsync(u => u.Id == request.UserId);
@@ -59,11 +81,30 @@ public class OrdersController : ControllerBase
         return order;
     }
 
-    // PUT /api/orders/{id}/status
+    /// <summary>
+    /// Изменяет статус заказа.
+    /// </summary>
+    /// <remarks>
+    /// Пример запроса:
+    ///
+    ///     PUT /api/orders/12/status
+    ///     {
+    ///         "status": "WORKING"
+    ///     }
+    ///
+    /// Правила переходов описаны в <c>OrderStatusService</c>.
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <param name="request">Новый статус заказа.</param>
+    /// <returns>Обновлённый заказ.</returns>
+    /// <response code="200">Статус успешно изменён</response>
+    /// <response code="400">Некорректный статус или переход невозможен</response>
+    /// <response code="404">Заказ не найден</response>
     [HttpPut("{id:long}/status")]
-    public async Task<ActionResult<Order>> ChangeStatus(
-        long id,
-        [FromBody] ChangeOrderStatusRequest request)
+    [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<Order>> ChangeStatus(long id, [FromBody] ChangeOrderStatusRequest request)
     {
         var order = await _dbContext.Orders.FindAsync(id);
         if (order == null) return NotFound();
@@ -88,6 +129,7 @@ public class OrdersController : ControllerBase
 
 
     }
+
     [HttpGet("GetLastOrders")]
     public async Task<IActionResult> GetLastOrders()
     {
@@ -102,7 +144,19 @@ public class OrdersController : ControllerBase
         return Ok(orders);
     }
 
-    // GET /api/orders/{id}
+    /// <summary>
+    /// Получает заказ по его идентификатору.
+    /// </summary>
+    /// <remarks>
+    /// Пример запроса:
+    ///
+    ///     GET /api/orders/12
+    ///
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <returns>Информация о заказе.</returns>
+    /// <response code="200">Заказ найден</response>
+    /// <response code="404">Заказ не найден</response>
     [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -128,7 +182,33 @@ public class OrdersController : ControllerBase
         return Ok(response);
     }
 
-    // POST /api/orders/{id}/decision
+    /// <summary>
+    /// Завершает или отклоняет заказ.
+    /// </summary>
+    /// <remarks>
+    /// Пример запроса:
+    ///
+    ///     POST /api/orders/12/decision
+    ///     {
+    ///         "isCompleted": true   // завершить
+    ///     }
+    ///
+    /// Или:
+    ///
+    ///     {
+    ///         "isCompleted": false  // отклонить
+    ///     }
+    ///
+    /// Допустимые конечные статусы:
+    /// - COMPLETED
+    /// - REJECTED
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <param name="request">Флаг завершения или отклонения.</param>
+    /// <returns>Обновлённый заказ.</returns>
+    /// <response code="200">Статус изменён</response>
+    /// <response code="400">Переход невозможен</response>
+    /// <response code="404">Заказ не найден</response>
     [HttpPost("{id:long}/decision")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
