@@ -128,6 +128,30 @@ public class OrdersController : ControllerBase
         return Ok(response);
     }
 
+    // POST /api/orders/{id}/decision
+    [HttpPost("{id:long}/decision")]
+    [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<Order>> Decide(long id, [FromBody] DecideOrderRequest request)
+    {
+        var order = await _dbContext.Orders.FindAsync(id);
+        if (order is null) return NotFound();
+
+        var currentStatus = order.Status;
+        var targetStatus = (request.IsCompleted ? OrderStatus.COMPLETED : OrderStatus.REJECTED).ToString();
+
+        if (!_orderStatusService.CanTransition(currentStatus, targetStatus)) return BadRequest($"Transition from '{currentStatus}' to '{targetStatus}' is not allowed."); // проверка на допустимость
+        if (string.Equals(currentStatus, targetStatus, StringComparison.OrdinalIgnoreCase)) return order; // вдруг статус уже такой
+
+        order.Status = targetStatus;
+        order.StatusChangedAt = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync();
+
+        return order;
+    }
+
     [HttpGet]
     [Authorize]
     [Route("test")]
