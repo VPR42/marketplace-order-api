@@ -59,7 +59,7 @@ public class OrdersController : ControllerBase
     /// <param name="request">Данные для создания заказа (идентификаторы пользователя и вакансии).</param>
     /// <response code="201">Заказ успешно создан. В теле ответа — созданный заказ.</response>
     /// <response code="400">Пользователь не найден или переданы некорректные данные.</response>
-    [HttpPost]
+    [HttpPost("create-order")]
     [SwaggerOperation(
         Summary = "Создать заказ",
         Description = "Создает заказ и публикует событие 'order.created' в RabbitMQ (exchange 'marketplace.orders').")]
@@ -183,7 +183,7 @@ public class OrdersController : ControllerBase
     /// Метод возвращает последние 5 или меньше заказов для пользователя
     /// </summary>
     /// <returns>JSON Содержащий информацию о заказах (Название заказа, стоимость заказа, когда заказан, и его статус) или Unauthorized</returns>
-    [HttpGet("GetLastOrders")]
+    [HttpGet("get-last-orders")]
     public async Task<IActionResult> GetLastOrders()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
