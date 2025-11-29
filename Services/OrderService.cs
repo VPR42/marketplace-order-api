@@ -1,6 +1,5 @@
 ﻿using MarketPlace.Data;
 using MarketPlace.DTO;
-using MarketPlace.Enums;
 using MarketPlace.Models;
 using Microsoft.EntityFrameworkCore;
 
