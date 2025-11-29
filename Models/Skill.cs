@@ -6,9 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MarketPlace.Models;
 
-[Table("categories")]
-[Index("Name", Name = "categories_name_key", IsUnique = true)]
-public partial class Category
+[Table("skills")]
+[Index("Name", Name = "skills_name_key", IsUnique = true)]
+public partial class Skill
 {
     [Key]
     [Column("id")]
@@ -17,7 +17,4 @@ public partial class Category
     [Column("name")]
     [StringLength(55)]
     public string Name { get; set; } = null!;
-
-    [InverseProperty("Category")]
-    public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
 }

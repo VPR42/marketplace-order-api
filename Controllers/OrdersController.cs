@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MarketPlace.Controllers;
 
@@ -15,37 +16,52 @@ public class OrdersController : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
+    private readonly IOrderEventsPublisher _orderEventsPublisher;
     private readonly OrderService _orderService;
 
-    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, OrderService orderService)
+    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher, OrderService orderService)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
+        _orderEventsPublisher = orderEventsPublisher;
         _orderService = orderService;
     }
 
     /// <summary>
-    /// Создаёт новый заказ.
+    /// Создает новый заказ.
     /// </summary>
     /// <remarks>
-    /// Пример запроса:
-    ///
-    ///     POST /api/orders
-    ///     {
-    ///         "userId": "9fa85f64-5717-4562-b3fc-2c963f66afa6",
-    ///         "jobId":  "2c2a4e21-9c00-4a59-9d38-6756b1f005f3"
-    ///     }
-    ///
-    /// Требования:
-    /// - Пользователь с указанным <c>UserId</c> должен существовать.
-    /// - Заказ создаётся со статусом <c>CREATED</c>.
-    /// - Поле <c>StatusChangedAt</c> автоматически устанавливается.
+    /// При успешном создании:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <description>Заказ сохраняется в базе данных.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>
+    ///       В RabbitMQ (exchange <c>marketplace.orders</c>) публикуется событие
+    ///       с routing key <c>order.created</c>.
+    ///     </description>
+    ///   </item>
+    /// </list>
+    /// Пример тела события <c>order.created</c>:
+    /// <code>
+    /// {
+    ///   "type": "order_created",
+    ///   "orderId": 123,
+    ///   "userId": 10,
+    ///   "jobId": 5,
+    ///   "status": "CREATED",
+    ///   "orderedAt": "2025-11-29T10:15:00Z"
+    /// }
+    /// </code>
     /// </remarks>
-    /// <param name="request">Данные для создания заказа.</param>
-    /// <returns>Созданный заказ и ссылка на эндпоинт его получения.</returns>
-    /// <response code="201">Заказ успешно создан</response>
-    /// <response code="400">Пользователь не существует или запрос некорректен</response>
+    /// <param name="request">Данные для создания заказа (идентификаторы пользователя и вакансии).</param>
+    /// <response code="201">Заказ успешно создан. В теле ответа — созданный заказ.</response>
+    /// <response code="400">Пользователь не найден или переданы некорректные данные.</response>
     [HttpPost]
+    [SwaggerOperation(
+        Summary = "Создать заказ",
+        Description = "Создает заказ и публикует событие 'order.created' в RabbitMQ (exchange 'marketplace.orders').")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Order>> CreateOrder([FromBody] CreateOrderRequest request)
@@ -68,6 +84,7 @@ public class OrdersController : ControllerBase
 
         _dbContext.Orders.Add(order);
         await _dbContext.SaveChangesAsync();
+        await _orderEventsPublisher.PublishOrderCreatedAsync(order);
 
         return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
     }
@@ -85,36 +102,56 @@ public class OrdersController : ControllerBase
     /// Изменяет статус заказа.
     /// </summary>
     /// <remarks>
-    /// Пример запроса:
-    ///
-    ///     PUT /api/orders/12/status
-    ///     {
-    ///         "status": "WORKING"
-    ///     }
-    ///
-    /// Допустимые статусы:
-    /// - CREATED
-    /// - WORKING
-    /// - COMPLETED
-    /// - CANCELLED
-    /// - REJECTED
-    ///
-    /// Правила переходов описаны в <c>OrderStatusService</c>.
-    /// В том числе через этот эндпоинт выполняются:
-    /// - завершение заказа (status = COMPLETED)
-    /// - отклонение заказа (status = REJECTED)
+    /// Логика:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <description>Проверяется корректность нового статуса и допустимость перехода.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>Статус и время изменения статуса обновляются в базе данных.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>
+    ///       Если новый статус один из <c>COMPLETED</c> или <c>REJECTED</c>,
+    ///       в RabbitMQ (exchange <c>marketplace.orders</c>) публикуется событие
+    ///       с routing key <c>order.closed</c>.
+    ///     </description>
+    ///   </item>
+    /// </list>
+    /// Пример тела события <c>order.closed</c>:
+    /// <code>
+    /// {
+    ///   "type": "order_closed",
+    ///   "orderId": 123,
+    ///   "userId": 10,
+    ///   "jobId": 5,
+    ///   "status": "COMPLETED",
+    ///   "closedAt": "2025-11-29T11:00:00Z"
+    /// }
+    /// </code>
     /// </remarks>
     /// <param name="id">Идентификатор заказа.</param>
     /// <param name="request">Новый статус заказа.</param>
-    /// <returns>Обновлённый заказ.</returns>
-    /// <response code="200">Статус успешно изменён</response>
-    /// <response code="400">Некорректный статус или переход невозможен</response>
-    /// <response code="404">Заказ не найден</response>
+    /// <response code="200">
+    /// Статус заказа успешно изменен. В теле ответа — обновленный заказ.
+    /// </response>
+    /// <response code="400">
+    /// Некорректный статус или запрещенный переход статусов.
+    /// </response>
+    /// <response code="404">
+    /// Заказ с указанным идентификатором не найден.
+    /// </response>
     [HttpPut("{id:long}/status")]
+    [SwaggerOperation(
+        Summary = "Изменить статус заказа",
+        Description =
+            "Обновляет статус заказа. При переходе в COMPLETED или REJECTED публикует событие 'order.closed' в RabbitMQ.")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Order>> ChangeStatus(long id, [FromBody] ChangeOrderStatusRequest request)
+    public async Task<ActionResult<Order>> ChangeStatus(
+        long id,
+        [FromBody] ChangeOrderStatusRequest request)
     {
         var order = await _dbContext.Orders.FindAsync(id);
         if (order == null) return NotFound();
@@ -122,11 +159,12 @@ public class OrdersController : ControllerBase
         var currentStatus = order.Status;
         var newStatus = request.Status.ToString().ToUpperInvariant();
 
-        if (!_orderStatusService.IsValidStatus(newStatus))
-            return BadRequest($"Status '{newStatus}' is invalid.");
+        if (!_orderStatusService.IsValidStatus(newStatus)) return BadRequest($"Status '{newStatus}' is invalid.");
+        if (!_orderStatusService.CanTransition(currentStatus, newStatus)) return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
 
-        if (!_orderStatusService.CanTransition(currentStatus, newStatus))
-            return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
+        var closingStatuses = new[] { OrderStatus.COMPLETED, OrderStatus.REJECTED };
+        var newStatusEnum = request.Status;
+        var wasClosing = closingStatuses.Contains(newStatusEnum);
 
         if (!string.Equals(currentStatus, newStatus, StringComparison.OrdinalIgnoreCase))
         {
@@ -135,9 +173,15 @@ public class OrdersController : ControllerBase
         }
 
         await _dbContext.SaveChangesAsync();
+
+        if (wasClosing) await _orderEventsPublisher.PublishOrderClosedAsync(order);
+
         return order;
     }
-
+    /// <summary>
+    /// Метод возвращает последние 5 или меньше заказов для пользователя
+    /// </summary>
+    /// <returns>JSON Содержащий информацию о заказах (Название заказа, стоимость заказа, когда заказан, и его статус) или Unauthorized</returns>
     [HttpGet("GetLastOrders")]
     public async Task<IActionResult> GetLastOrders()
     {
