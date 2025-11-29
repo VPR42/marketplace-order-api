@@ -4,7 +4,7 @@ using MarketPlace.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Swashbuckle.AspNetCore.Annotations;
+using Microsoft.OpenApi.Models;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
 
@@ -28,20 +28,37 @@ builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublishe
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Marketplace Orders API",
+        Version = "v1"
+    });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     c.IncludeXmlComments(xmlPath);
 });
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger(c =>
 {
-    app.UseSwagger(options =>
-    {
-    });
-    app.UseSwaggerUI();
-}
+    c.RouteTemplate = "api/orders/docs/{documentName}/swagger.json";
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/api/orders/docs/v1/swagger.json", "Marketplace Orders API v1");
+    app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/api/orders/docs/v1/swagger.json", "Marketplace Orders API v1");
+    c.RoutePrefix = "api/orders/swagger";
+});
+});
+
+app.MapGet("/api/orders/docs", () =>
+        Results.Redirect("/api/orders/docs/v1/swagger.json"))
+   .WithMetadata(new AllowAnonymousAttribute());
 
 app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
 app.UseMiddleware<GatewayUserMiddleware>();
