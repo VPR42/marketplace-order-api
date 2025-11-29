@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using MarketPlace.Models;
+﻿using MarketPlace.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarketPlace.Data;
@@ -22,8 +20,6 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Favourite> Favourites { get; set; }
 
-    public virtual DbSet<Job> Jobs { get; set; }
-
     public virtual DbSet<MasterSkill> MasterSkills { get; set; }
 
     public virtual DbSet<MastersInfo> MastersInfos { get; set; }
@@ -36,6 +32,7 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<Job> Jobs { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -103,7 +100,9 @@ public partial class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<MastersInfo>(entity =>
         {
-            entity.HasOne(d => d.Master).WithMany().HasConstraintName("masters_info_master_id_fkey");
+            entity.HasOne(d => d.Master)
+            .WithMany()
+            .HasConstraintName("masters_info_master_id_fkey");
         });
 
 

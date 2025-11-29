@@ -1,6 +1,7 @@
 ﻿using MarketPlace.Data;
 using MarketPlace.DTO;
 using MarketPlace.Models;
+using MarketPlace.Mappers;
 using MarketPlace.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -191,7 +192,6 @@ public class OrdersController : ControllerBase
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
             return Unauthorized();
 
-
         var orders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
         return Ok(orders);
     }
@@ -216,20 +216,15 @@ public class OrdersController : ControllerBase
     {
         var order = await _dbContext.Orders
             .AsNoTracking()
+            .Include(o => o.User)
+                .ThenInclude(u => u.CityNavigation)
+            .Include(o => o.Job)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order is null)
             return NotFound();
 
-        var response = new OrderResponse
-        {
-            Id = order.Id,
-            UserId = order.UserId,
-            JobId = order.JobId,
-            Status = order.Status,
-            OrderedAt = order.OrderedAt,
-            StatusChangedAt = order.StatusChangedAt
-        };
+        var response = order.ToOrderResponse();
 
         return Ok(response);
     }

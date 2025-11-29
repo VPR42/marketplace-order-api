@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
 namespace MarketPlace.Models;
 
@@ -19,6 +16,10 @@ public partial class Order
     [Column("job_id")]
     public Guid JobId { get; set; }
 
+    [ForeignKey("JobId")]
+    [InverseProperty("Orders")]
+    public virtual Job Job { get; set; } = null!;
+
     [Column("status")]
     [StringLength(15)]
     public string Status { get; set; } = null!;
@@ -28,10 +29,6 @@ public partial class Order
 
     [Column("status_changed_at")]
     public DateTime? StatusChangedAt { get; set; }
-
-    [ForeignKey("JobId")]
-    [InverseProperty("Orders")]
-    public virtual Job Job { get; set; } = null!;
 
     [ForeignKey("UserId")]
     [InverseProperty("Orders")]

@@ -3,35 +3,66 @@ using MarketPlace.DTO;
 using MarketPlace.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace MarketPlace.Services
+namespace MarketPlace.Services;
+
+public class OrderService
 {
-    public class OrderService
+    private readonly ApplicationDbContext _dbContext;
+
+    public OrderService(ApplicationDbContext dbContext)
     {
-        private readonly ApplicationDbContext _dbContext;
-        public OrderService(ApplicationDbContext dbContext)
-        {
-            _dbContext = dbContext;
-        }
+        _dbContext = dbContext;
+    }
 
-        public async Task<List<LastOrderDTO>> GetLastOrdersForUser(Guid userId)
+    public async Task<List<OrderResponse>> GetLastOrdersForUser(Guid userId)
+    {
+        var statuses = new[]
         {
-            var statuses = new[] { OrderStatus.COMPLETED.ToString(), OrderStatus.REJECTED.ToString() };
+            OrderStatus.COMPLETED.ToString(),
+            OrderStatus.REJECTED.ToString()
+        };
 
-            var orders = await _dbContext.Orders
-                .Where(o => o.UserId == userId && statuses.Contains(o.Status))
-                .OrderByDescending(o => o.OrderedAt)
-                .Take(5)
-                .Select(e => new LastOrderDTO
+        return await _dbContext.Orders
+            .AsNoTracking()
+            .Where(o => o.UserId == userId && statuses.Contains(o.Status))
+            .Include(o => o.User)
+                .ThenInclude(u => u.CityNavigation)
+            .Include(o => o.Job) 
+            .OrderByDescending(o => o.OrderedAt)
+            .Take(5)
+            .Select(o => new OrderResponse
+            {
+                Id = o.Id,
+                Status = o.Status,
+                OrderedAt = o.OrderedAt,
+                StatusChangedAt = o.StatusChangedAt,
+
+                User = new UserDto
                 {
-                    OrderName = e.Job.Name,
-                    OrderedAt = e.OrderedAt,
-                    OrderPrice = e.Job.Price,
-                    Status = e.Status
-                })
-                .ToListAsync();
+                    Id = o.User.Id,
+                    Surname = o.User.Surname,
+                    Name = o.User.Name,
+                    Patronymic = o.User.Patronymic,
+                    Email = o.User.Email,
+                    AvatarPath = o.User.AvatarPath,
+                    City = new CityDto
+                    {
+                        Id = o.User.CityNavigation.Id,
+                        Name = o.User.CityNavigation.Name,
+                        Region = o.User.CityNavigation.Region
+                    }
+                },
 
-            return orders;
-        }
-
+                Job = new JobDto
+                {
+                    Id = o.Job.Id,
+                    Name = o.Job.Name,
+                    Description = o.Job.Description,
+                    Price = o.Job.Price,
+                    CoverUrl = o.Job.CoverUrl,
+                    CategoryId = o.Job.CategoryId
+                }
+            })
+            .ToListAsync();
     }
 }
