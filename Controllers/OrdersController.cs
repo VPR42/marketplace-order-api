@@ -92,7 +92,17 @@ public class OrdersController : ControllerBase
     ///         "status": "WORKING"
     ///     }
     ///
+    /// Допустимые статусы:
+    /// - CREATED
+    /// - WORKING
+    /// - COMPLETED
+    /// - CANCELLED
+    /// - REJECTED
+    ///
     /// Правила переходов описаны в <c>OrderStatusService</c>.
+    /// В том числе через этот эндпоинт выполняются:
+    /// - завершение заказа (status = COMPLETED)
+    /// - отклонение заказа (status = REJECTED)
     /// </remarks>
     /// <param name="id">Идентификатор заказа.</param>
     /// <param name="request">Новый статус заказа.</param>
@@ -110,7 +120,7 @@ public class OrdersController : ControllerBase
         if (order == null) return NotFound();
 
         var currentStatus = order.Status;
-        var newStatus = (request.Status).ToString();
+        var newStatus = request.Status.ToString().ToUpperInvariant();
 
         if (!_orderStatusService.IsValidStatus(newStatus))
             return BadRequest($"Status '{newStatus}' is invalid.");
@@ -118,16 +128,14 @@ public class OrdersController : ControllerBase
         if (!_orderStatusService.CanTransition(currentStatus, newStatus))
             return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
 
-        if (!string.Equals(currentStatus, newStatus.ToUpperInvariant(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(currentStatus, newStatus, StringComparison.OrdinalIgnoreCase))
         {
-            order.Status = newStatus.ToUpperInvariant();
+            order.Status = newStatus;
             order.StatusChangedAt = DateTime.UtcNow;
         }
 
         await _dbContext.SaveChangesAsync();
         return order;
-
-
     }
 
     [HttpGet("GetLastOrders")]
@@ -180,56 +188,6 @@ public class OrdersController : ControllerBase
         };
 
         return Ok(response);
-    }
-
-    /// <summary>
-    /// Завершает или отклоняет заказ.
-    /// </summary>
-    /// <remarks>
-    /// Пример запроса:
-    ///
-    ///     POST /api/orders/12/decision
-    ///     {
-    ///         "isCompleted": true   // завершить
-    ///     }
-    ///
-    /// Или:
-    ///
-    ///     {
-    ///         "isCompleted": false  // отклонить
-    ///     }
-    ///
-    /// Допустимые конечные статусы:
-    /// - COMPLETED
-    /// - REJECTED
-    /// </remarks>
-    /// <param name="id">Идентификатор заказа.</param>
-    /// <param name="request">Флаг завершения или отклонения.</param>
-    /// <returns>Обновлённый заказ.</returns>
-    /// <response code="200">Статус изменён</response>
-    /// <response code="400">Переход невозможен</response>
-    /// <response code="404">Заказ не найден</response>
-    [HttpPost("{id:long}/decision")]
-    [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<Order>> Decide(long id, [FromBody] DecideOrderRequest request)
-    {
-        var order = await _dbContext.Orders.FindAsync(id);
-        if (order is null) return NotFound();
-
-        var currentStatus = order.Status;
-        var targetStatus = (request.IsCompleted ? OrderStatus.COMPLETED : OrderStatus.REJECTED).ToString();
-
-        if (!_orderStatusService.CanTransition(currentStatus, targetStatus)) return BadRequest($"Transition from '{currentStatus}' to '{targetStatus}' is not allowed."); // проверка на допустимость
-        if (string.Equals(currentStatus, targetStatus, StringComparison.OrdinalIgnoreCase)) return order; // вдруг статус уже такой
-
-        order.Status = targetStatus;
-        order.StatusChangedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync();
-
-        return order;
     }
 
     [HttpGet]
