@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace MarketPlace.Controllers;
 
@@ -26,8 +27,43 @@ public class OrdersController : ControllerBase
         _orderService = orderService;
     }
 
-    // POST /api/orders
+    /// <summary>
+    /// Создает новый заказ.
+    /// </summary>
+    /// <remarks>
+    /// При успешном создании:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <description>Заказ сохраняется в базе данных.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>
+    ///       В RabbitMQ (exchange <c>marketplace.orders</c>) публикуется событие
+    ///       с routing key <c>order.created</c>.
+    ///     </description>
+    ///   </item>
+    /// </list>
+    /// Пример тела события <c>order.created</c>:
+    /// <code>
+    /// {
+    ///   "type": "order_created",
+    ///   "orderId": 123,
+    ///   "userId": 10,
+    ///   "jobId": 5,
+    ///   "status": "CREATED",
+    ///   "orderedAt": "2025-11-29T10:15:00Z"
+    /// }
+    /// </code>
+    /// </remarks>
+    /// <param name="request">Данные для создания заказа (идентификаторы пользователя и вакансии).</param>
+    /// <response code="201">Заказ успешно создан. В теле ответа — созданный заказ.</response>
+    /// <response code="400">Пользователь не найден или переданы некорректные данные.</response>
     [HttpPost]
+    [SwaggerOperation(
+        Summary = "Создать заказ",
+        Description = "Создает заказ и публикует событие 'order.created' в RabbitMQ (exchange 'marketplace.orders').")]
+    [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Order>> CreateOrder([FromBody] CreateOrderRequest request)
     {
         var userExists = await _dbContext.Users.AnyAsync(u => u.Id == request.UserId);
@@ -62,8 +98,57 @@ public class OrdersController : ControllerBase
         return order;
     }
 
-    // PUT /api/orders/{id}/status
+    /// <summary>
+    /// Изменяет статус заказа.
+    /// </summary>
+    /// <remarks>
+    /// Логика:
+    /// <list type="bullet">
+    ///   <item>
+    ///     <description>Проверяется корректность нового статуса и допустимость перехода.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>Статус и время изменения статуса обновляются в базе данных.</description>
+    ///   </item>
+    ///   <item>
+    ///     <description>
+    ///       Если новый статус один из <c>COMPLETED</c> или <c>REJECTED</c>,
+    ///       в RabbitMQ (exchange <c>marketplace.orders</c>) публикуется событие
+    ///       с routing key <c>order.closed</c>.
+    ///     </description>
+    ///   </item>
+    /// </list>
+    /// Пример тела события <c>order.closed</c>:
+    /// <code>
+    /// {
+    ///   "type": "order_closed",
+    ///   "orderId": 123,
+    ///   "userId": 10,
+    ///   "jobId": 5,
+    ///   "status": "COMPLETED",
+    ///   "closedAt": "2025-11-29T11:00:00Z"
+    /// }
+    /// </code>
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <param name="request">Новый статус заказа.</param>
+    /// <response code="200">
+    /// Статус заказа успешно изменен. В теле ответа — обновленный заказ.
+    /// </response>
+    /// <response code="400">
+    /// Некорректный статус или запрещенный переход статусов.
+    /// </response>
+    /// <response code="404">
+    /// Заказ с указанным идентификатором не найден.
+    /// </response>
     [HttpPut("{id:long}/status")]
+    [SwaggerOperation(
+        Summary = "Изменить статус заказа",
+        Description =
+            "Обновляет статус заказа. При переходе в COMPLETED или REJECTED публикует событие 'order.closed' в RabbitMQ.")]
+    [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<Order>> ChangeStatus(
         long id,
         [FromBody] ChangeOrderStatusRequest request)
@@ -95,6 +180,7 @@ public class OrdersController : ControllerBase
 
 
     }
+
     [HttpGet("GetLastOrders")]
     public async Task<IActionResult> GetLastOrders()
     {
