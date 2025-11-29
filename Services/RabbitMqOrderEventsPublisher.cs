@@ -30,6 +30,22 @@ public class RabbitMqOrderEventsPublisher : IOrderEventsPublisher, IDisposable
         _channel.ExchangeDeclare(exchange: _settings.Exchange, type: ExchangeType.Topic, durable: true);
     }
 
+    public Task PublishOrderCreatedAsync(Order order)
+    {
+        var message = new
+        {
+            type = "order_created",
+            orderId = order.Id,
+            userId = order.UserId,
+            jobId = order.JobId,
+            status = order.Status,
+            orderedAt = order.OrderedAt
+        };
+
+        Publish("order.created", message);
+        return Task.CompletedTask;
+    }
+
     public Task PublishOrderClosedAsync(Order order)
     {
         var message = new

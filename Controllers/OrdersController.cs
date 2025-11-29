@@ -48,6 +48,7 @@ public class OrdersController : ControllerBase
 
         _dbContext.Orders.Add(order);
         await _dbContext.SaveChangesAsync();
+        await _orderEventsPublisher.PublishOrderCreatedAsync(order);
 
         return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
     }
@@ -76,7 +77,7 @@ public class OrdersController : ControllerBase
         if (!_orderStatusService.IsValidStatus(newStatus)) return BadRequest($"Status '{newStatus}' is invalid.");
         if (!_orderStatusService.CanTransition(currentStatus, newStatus)) return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
 
-        var closingStatuses = new[] { OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.REJECTED };
+        var closingStatuses = new[] { OrderStatus.COMPLETED, OrderStatus.REJECTED };
         var newStatusEnum = request.Status;
         var wasClosing = closingStatuses.Contains(newStatusEnum);
 
