@@ -86,8 +86,8 @@ public class OrdersController : ControllerBase
         await _dbContext.SaveChangesAsync();
         return order;
 
-
     }
+
     [HttpGet("GetLastOrders")]
     public async Task<IActionResult> GetLastOrders()
     {
@@ -97,12 +97,23 @@ public class OrdersController : ControllerBase
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
             return Unauthorized();
 
-
         var orders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
         return Ok(orders);
     }
 
-    // GET /api/orders/{id}
+    /// <summary>
+    /// Получает заказ по его идентификатору.
+    /// </summary>
+    /// <remarks>
+    /// Пример запроса:
+    ///
+    ///     GET /api/orders/12
+    ///
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <returns>Информация о заказе с данными пользователя и вакансии.</returns>
+    /// <response code="200">Заказ найден</response>
+    /// <response code="404">Заказ не найден</response>
     [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -110,6 +121,9 @@ public class OrdersController : ControllerBase
     {
         var order = await _dbContext.Orders
             .AsNoTracking()
+            .Include(o => o.User)
+                .ThenInclude(u => u.CityNavigation)
+            .Include(o => o.Job)
             .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order is null)
@@ -118,11 +132,35 @@ public class OrdersController : ControllerBase
         var response = new OrderResponse
         {
             Id = order.Id,
-            UserId = order.UserId,
-            JobId = order.JobId,
             Status = order.Status,
             OrderedAt = order.OrderedAt,
-            StatusChangedAt = order.StatusChangedAt
+            StatusChangedAt = order.StatusChangedAt,
+
+            User = new UserDto
+            {
+                Id = order.User.Id,
+                Surname = order.User.Surname,
+                Name = order.User.Name,
+                Patronymic = order.User.Patronymic,
+                Email = order.User.Email,
+                AvatarPath = order.User.AvatarPath,
+                City = new CityDto
+                {
+                    Id = order.User.CityNavigation.Id,
+                    Name = order.User.CityNavigation.Name,
+                    Region = order.User.CityNavigation.Region
+                }
+            },
+
+            Job = new JobDto
+            {
+                Id = order.Job.Id,
+                Name = order.Job.Name,
+                Description = order.Job.Description,
+                Price = order.Job.Price,
+                CoverUrl = order.Job.CoverUrl,
+                CategoryId = order.Job.CategoryId
+            }
         };
 
         return Ok(response);
