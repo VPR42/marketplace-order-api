@@ -1,17 +1,24 @@
 services:
-  module-name:
+  marketplace-orders-api:
     build:
       context: ./
       dockerfile: ./Dockerfile
-    image: module-name
-    container_name: module-name
+    image: markplace-orders-api
+    container_name: markplace-orders-api
     restart: always
     volumes:
-      - /home/kinoko/logs/module-name:/app/logs
+      - /home/kinoko/logs/markplace-orders-api:/app/logs
     networks:
       - backend
     ports:
-      - "33300:33300"
+      - "33308:33308"
+    environment:
+      ASPNETCORE_URLS: http://0.0.0.0:33308
+      EUREKA__CLIENT__SERVICEURL__DEFAULTZONE: http://marketplace-eureka:33307/eureka/
+      EUREKA__CLIENT__SHOULDFETCHREGISTRY: "true"
+      EUREKA__CLIENT__SHOULDREGISTERWITHEUREKA: "true"
+      EUREKA__INSTANCE__APPNAME: marketplace-orders-api
+      EUREKA__INSTANCE__PORT: 33308
 
 networks:
   backend:

@@ -1,13 +1,13 @@
 name: Маркетплейс услуг (.NET)
 
 on:
-  push: {}   # каждый коммит, все ветки
+  push: {}
 
 env:
-  DOTNET_VERSION: '8.0.0'
-  TARGET_DIR: /home/kinoko/marketplace/module-name
-  BACKUP_DIR: /home/kinoko/backup/module-name
-  PUBLISH_DIR: /tmp/marketplace/module-name/publish
+  DOTNET_VERSION: '9.0.x'
+  TARGET_DIR: /home/kinoko/marketplace/markplace-orders-api
+  BACKUP_DIR: /home/kinoko/backup/markplace-orders-api
+  PUBLISH_DIR: /tmp/marketplace/markplace-orders-api/publish
 
 jobs:
   build:
@@ -20,27 +20,13 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
-          cache: true
+          cache: false
 
       - name: Restore
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore -c Release
-
-      - name: Test
-        run: |
-          if ls **/*.csproj | grep -qi test; then
-            dotnet test --no-build -c Release
-          else
-            echo "Тестовых проектов не найдено — пропускаю"
-          fi
-
-      - name: Publish (self-contained = false)
-        run: |
-          mkdir -p ./publish
-          # Если у тебя солюшен — укажи стартовый проект через -p:PublishSingleFile=false
-          dotnet publish -c Release -o ./publish
+        run: dotnet build --no-restore -c Release -o ./publish
 
       - name: Upload artifacts
         if: github.ref == 'refs/heads/main'
@@ -56,16 +42,12 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v5
-
-      - name: Create backup of current deployment
-        run: |
-          if [ -e "${{ env.TARGET_DIR }}" ]; then
-            sudo mkdir -p "${{ env.BACKUP_DIR }}"
-            sudo cp -r "${{ env.TARGET_DIR }}" "${{ env.BACKUP_DIR }}"
-            echo "Backup created at ${{ env.BACKUP_DIR }}"
-          else
-            echo "Деплоев ещё не было. Бэкапа не буит."
-          fi
+        
+      - name: Download published files
+        uses: actions/download-artifact@v5
+        with:
+          name: app-publish
+          path: ${{ env.PUBLISH_DIR }}
 
       - name: Stop and remove existing containers
         run: |
@@ -80,12 +62,6 @@ jobs:
         run: |
           sudo cp -r ./* "${{ env.TARGET_DIR }}"
           sudo chown -R kinoko:kinoko "${{ env.TARGET_DIR }}"
-
-      - name: Download published files
-        uses: actions/download-artifact@v5
-        with:
-          name: app-publish
-          path: ${{ env.PUBLISH_DIR }}
 
       - name: Copy publish to server
         run: |
