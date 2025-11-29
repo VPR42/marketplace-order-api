@@ -31,7 +31,7 @@ public partial class MastersInfo
     public string? About { get; set; }
 
     [Column("days_of_week")]
-    public int[]? DaysOfWeek { get; set; }
+    public List<int>? DaysOfWeek { get; set; }
 
     [Column("start_time")]
     [StringLength(5)]
