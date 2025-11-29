@@ -48,5 +48,11 @@ public partial class User
     public virtual City CityNavigation { get; set; } = null!;
 
     [InverseProperty("User")]
+    public virtual ICollection<Favourite> Favourites { get; set; } = new List<Favourite>();
+
+    [InverseProperty("Master")]
+    public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
+
+    [InverseProperty("User")]
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 }

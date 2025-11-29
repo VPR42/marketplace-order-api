@@ -6,34 +6,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MarketPlace.Models;
 
-[Table("orders")]
-public partial class Order
+[PrimaryKey("UserId", "JobId")]
+[Table("favourites")]
+public partial class Favourite
 {
     [Key]
-    [Column("id")]
-    public long Id { get; set; }
-
     [Column("user_id")]
     public Guid UserId { get; set; }
 
+    [Key]
     [Column("job_id")]
     public Guid JobId { get; set; }
 
-    [Column("status")]
-    [StringLength(15)]
-    public string Status { get; set; } = null!;
-
-    [Column("ordered_at")]
-    public DateTime OrderedAt { get; set; }
-
-    [Column("status_changed_at")]
-    public DateTime? StatusChangedAt { get; set; }
+    [Column("created_at", TypeName = "timestamp without time zone")]
+    public DateTime CreatedAt { get; set; }
 
     [ForeignKey("JobId")]
-    [InverseProperty("Orders")]
+    [InverseProperty("Favourites")]
     public virtual Job Job { get; set; } = null!;
 
     [ForeignKey("UserId")]
-    [InverseProperty("Orders")]
+    [InverseProperty("Favourites")]
     public virtual User User { get; set; } = null!;
 }

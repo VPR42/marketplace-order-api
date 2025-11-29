@@ -180,7 +180,10 @@ public class OrdersController : ControllerBase
 
 
     }
-
+    /// <summary>
+    /// Метод возвращает последние 5 или меньше заказов для пользователя
+    /// </summary>
+    /// <returns>JSON Содержащий информацию о заказах (Название заказа, стоимость заказа, когда заказан, и его статус) или Unauthorized</returns>
     [HttpGet("GetLastOrders")]
     public async Task<IActionResult> GetLastOrders()
     {
