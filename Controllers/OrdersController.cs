@@ -157,7 +157,7 @@ public class OrdersController : ControllerBase
         if (order == null) return NotFound();
 
         var currentStatus = order.Status;
-        var newStatus = (request.Status).ToString();
+        var newStatus = request.Status.ToString().ToUpperInvariant();
 
         if (!_orderStatusService.IsValidStatus(newStatus)) return BadRequest($"Status '{newStatus}' is invalid.");
         if (!_orderStatusService.CanTransition(currentStatus, newStatus)) return BadRequest($"Transition from '{currentStatus}' to '{newStatus}' is not allowed.");
@@ -166,9 +166,9 @@ public class OrdersController : ControllerBase
         var newStatusEnum = request.Status;
         var wasClosing = closingStatuses.Contains(newStatusEnum);
 
-        if (!string.Equals(currentStatus, newStatus.ToUpperInvariant(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(currentStatus, newStatus, StringComparison.OrdinalIgnoreCase))
         {
-            order.Status = newStatus.ToUpperInvariant();
+            order.Status = newStatus;
             order.StatusChangedAt = DateTime.UtcNow;
         }
 
@@ -177,8 +177,6 @@ public class OrdersController : ControllerBase
         if (wasClosing) await _orderEventsPublisher.PublishOrderClosedAsync(order);
 
         return order;
-
-
     }
     /// <summary>
     /// Метод возвращает последние 5 или меньше заказов для пользователя
@@ -198,7 +196,19 @@ public class OrdersController : ControllerBase
         return Ok(orders);
     }
 
-    // GET /api/orders/{id}
+    /// <summary>
+    /// Получает заказ по его идентификатору.
+    /// </summary>
+    /// <remarks>
+    /// Пример запроса:
+    ///
+    ///     GET /api/orders/12
+    ///
+    /// </remarks>
+    /// <param name="id">Идентификатор заказа.</param>
+    /// <returns>Информация о заказе.</returns>
+    /// <response code="200">Заказ найден</response>
+    /// <response code="404">Заказ не найден</response>
     [HttpGet("{id:long}")]
     [ProducesResponseType(typeof(OrderResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
