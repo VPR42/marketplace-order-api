@@ -4,6 +4,7 @@ using MarketPlace.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Swashbuckle.AspNetCore.Annotations;
 using Steeltoe.Discovery.Client;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,8 +19,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
 builder.Services.AddScoped<OrderService>();
 
+builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMq"));
+builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublisher>();
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.EnableAnnotations();
+});
 
 builder.Services.AddAuthentication("custom")
     .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>("custom", options => { });

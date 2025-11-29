@@ -28,6 +28,9 @@
     <PackageReference Include="Steeltoe.Discovery.ClientCore" Version="3.2.8" />
     <PackageReference Include="Steeltoe.Discovery.Eureka" Version="3.2.8" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="6.6.2" />
   </ItemGroup>
 
 </Project>
