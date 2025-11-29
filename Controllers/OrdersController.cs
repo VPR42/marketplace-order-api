@@ -1,6 +1,7 @@
 ﻿using MarketPlace.Data;
 using MarketPlace.DTO;
 using MarketPlace.Models;
+using MarketPlace.Mappers;
 using MarketPlace.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -223,88 +224,7 @@ public class OrdersController : ControllerBase
         if (order is null)
             return NotFound();
 
-        var response = new OrderResponse
-        {
-            Id = order.Id,
-            Status = order.Status,
-            OrderedAt = order.OrderedAt,
-            StatusChangedAt = order.StatusChangedAt,
-
-            User = new UserDto
-            {
-                Id = order.User.Id,
-                Surname = order.User.Surname,
-                Name = order.User.Name,
-                Patronymic = order.User.Patronymic,
-                Email = order.User.Email,
-                AvatarPath = order.User.AvatarPath,
-                City = new CityDto
-                {
-                    Id = order.User.CityNavigation.Id,
-                    Name = order.User.CityNavigation.Name,
-                    Region = order.User.CityNavigation.Region
-                }
-            },
-
-            Job = new JobDto
-            {
-                Id = order.Job.Id,
-                Name = order.Job.Name,
-                Description = order.Job.Description,
-                Price = order.Job.Price,
-                CoverUrl = order.Job.CoverUrl,
-                CategoryId = order.Job.CategoryId
-            }
-        };
-
-        return Ok(response);
-    }
-
-    /// <summary>
-    /// Возвращает полную информацию о заказе: данные заказа, пользователя и города.
-    /// </summary>
-    /// <remarks>
-    /// Пример запроса:
-    ///
-    ///     GET /api/orders/12/details
-    ///
-    /// </remarks>
-    /// <param name="id">Идентификатор заказа.</param>
-    /// <returns>Полная информация о заказе.</returns>
-    /// <response code="200">Информация о заказе успешно получена</response>
-    /// <response code="404">Заказ не найден</response>
-    [HttpGet("{id:long}/details")]
-    [ProducesResponseType(typeof(OrderDetailsResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OrderDetailsResponse>> GetOrderDetails(long id)
-    {
-        var order = await _dbContext.Orders.AsNoTracking().Include(o => o.User).ThenInclude(u => u.CityNavigation).FirstOrDefaultAsync(o => o.Id == id);
-
-        if (order is null) return NotFound();
-
-        var user = order.User;
-        var city = user.CityNavigation;
-
-        var response = new OrderDetailsResponse
-        {
-            Id = order.Id,
-
-            JobId = order.JobId,
-            Status = order.Status,
-            OrderedAt = order.OrderedAt,
-            StatusChangedAt = order.StatusChangedAt,
-
-            UserId = user.Id,
-            UserSurname = user.Surname,
-            UserName = user.Name,
-            UserPatronymic = user.Patronymic,
-            UserEmail = user.Email,
-            UserAvatarPath = user.AvatarPath,
-
-            CityId = city.Id,
-            CityName = city.Name,
-            CityRegion = city.Region
-        };
+        var response = order.ToOrderResponse();
 
         return Ok(response);
     }

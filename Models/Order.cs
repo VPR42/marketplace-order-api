@@ -30,10 +30,6 @@ public partial class Order
     [Column("status_changed_at")]
     public DateTime? StatusChangedAt { get; set; }
 
-    [ForeignKey("JobId")]
-    [InverseProperty("Orders")]
-    public virtual Job Job { get; set; } = null!;
-
     [ForeignKey("UserId")]
     [InverseProperty("Orders")]
     public virtual User User { get; set; } = null!;

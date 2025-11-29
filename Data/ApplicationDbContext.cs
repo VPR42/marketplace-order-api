@@ -20,8 +20,6 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Favourite> Favourites { get; set; }
 
-    public virtual DbSet<Job> Jobs { get; set; }
-
     public virtual DbSet<MasterSkill> MasterSkills { get; set; }
 
     public virtual DbSet<MastersInfo> MastersInfos { get; set; }
