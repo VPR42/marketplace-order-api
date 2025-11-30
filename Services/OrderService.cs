@@ -84,7 +84,7 @@ namespace MarketPlace.Services
             query = query.OrderByDescending(o => o.OrderedAt);
 
             // Рассчитываем, сколько записей нужно пропустить (Skip)
-            var skipCount = (filterParams.PageNumber - 1) * filterParams.PageSize;
+            var skipCount = filterParams.PageNumber * filterParams.PageSize;
 
             // Применяем Skip/Take
             var pagedOrders = await query

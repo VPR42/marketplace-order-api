@@ -14,7 +14,7 @@ namespace MarketPlace.DTO
         public int? CategoryId { get; set; } // int? чтобы было необязательным
 
         // Пагинация
-        public int PageNumber { get; set; } = 1;
+        public int PageNumber { get; set; } = 0;
         public int PageSize { get; set; } = 10;
     }
 }
