@@ -145,6 +145,4 @@ public class OrderService
 
             return (pagedOrders, totalCount);
         }
-
-    }
 }
