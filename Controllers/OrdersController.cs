@@ -16,14 +16,12 @@ public class OrdersController : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
-    private readonly IOrderEventsPublisher _orderEventsPublisher;
     private readonly OrderService _orderService;
 
-    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, IOrderEventsPublisher orderEventsPublisher, OrderService orderService)
+    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, OrderService orderService)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
-        _orderEventsPublisher = orderEventsPublisher;
         _orderService = orderService;
     }
 
@@ -59,7 +57,6 @@ public class OrdersController : ControllerBase
 
         _dbContext.Orders.Add(order);
         await _dbContext.SaveChangesAsync();
-        await _orderEventsPublisher.PublishOrderCreatedAsync(order);
 
         return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
     }
@@ -119,8 +116,6 @@ public class OrdersController : ControllerBase
         }
 
         await _dbContext.SaveChangesAsync();
-
-        if (wasClosing) await _orderEventsPublisher.PublishOrderClosedAsync(order);
 
         return order;
     }
