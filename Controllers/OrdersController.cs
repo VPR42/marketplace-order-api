@@ -36,7 +36,7 @@ public class OrdersController : ControllerBase
     [HttpPost("create-order")]
     [SwaggerOperation(
         Summary = "Создать заказ",
-        Description = "Создает заказ и публикует событие 'order.created' в RabbitMQ (exchange 'marketplace.orders').")]
+        Description = "Создает заказ.")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Order>> CreateOrder([FromBody] CreateOrderRequest request)
@@ -91,7 +91,7 @@ public class OrdersController : ControllerBase
     [SwaggerOperation(
         Summary = "Изменить статус заказа",
         Description =
-            "Обновляет статус заказа. При переходе в COMPLETED или REJECTED публикует событие 'order.closed' в RabbitMQ.")]
+            "Обновляет статус заказа. ")]
     [ProducesResponseType(typeof(Order), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
