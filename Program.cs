@@ -1,11 +1,25 @@
 using MarketPlace.Data;
+using MarketPlace.Security;
 using MarketPlace.Services;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using Serilog;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// настроить Serilog из appsettings.json
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+
+// сказать хосту использовать Serilog
+builder.Host.UseSerilog();
+
+builder.Services.AddDiscoveryClient(builder.Configuration);
 builder.Services.AddControllers();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -14,27 +28,50 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
 builder.Services.AddScoped<OrderService>();
 
+builder.Services.AddAuthentication("custom")
+    .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>("custom", options => { });
+
+builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMq"));
+builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublisher>();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Marketplace Orders API",
+        Version = "v1"
+    });
+
+    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     c.IncludeXmlComments(xmlPath);
 });
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.UseSwagger(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.RouteTemplate = "api/orders/docs/{documentName}/swagger.json";
+});
+
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/api/orders/docs/v1/swagger.json", "Marketplace Orders API v1");
+    c.RoutePrefix = "api/orders/swagger";
+});
+
+app.MapGet("/api/orders/docs", () =>
+        Results.Redirect("/api/orders/docs/v1/swagger.json"))
+   .WithMetadata(new AllowAnonymousAttribute());
 
 app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
+
 app.UseMiddleware<GatewayUserMiddleware>();
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

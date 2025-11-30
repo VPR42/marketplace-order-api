@@ -1,5 +1,5 @@
 services:
-  markplace-orders-api:
+  marketplace-orders-api:
     build:
       context: ./
       dockerfile: ./Dockerfile
@@ -13,6 +13,7 @@ services:
     ports:
       - "33308:33308"
     environment:
+      ASPNETCORE_URLS: http://0.0.0.0:33308
       EUREKA__CLIENT__SERVICEURL__DEFAULTZONE: http://marketplace-eureka:33307/eureka/
       EUREKA__CLIENT__SHOULDFETCHREGISTRY: "true"
       EUREKA__CLIENT__SHOULDREGISTERWITHEUREKA: "true"
