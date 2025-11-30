@@ -17,12 +17,16 @@ public class OrdersController : ControllerBase
     private readonly ApplicationDbContext _dbContext;
     private readonly IOrderStatusService _orderStatusService;
     private readonly OrderService _orderService;
+    private readonly ILogger<OrdersController> _logger;
 
-    public OrdersController(ApplicationDbContext dbContext, IOrderStatusService orderStatusService, OrderService orderService)
+    public OrdersController(ApplicationDbContext dbContext, 
+        IOrderStatusService orderStatusService, 
+        OrderService orderService, ILogger<OrdersController> logger)
     {
         _dbContext = dbContext;
         _orderStatusService = orderStatusService;
         _orderService = orderService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -39,16 +43,10 @@ public class OrdersController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Order>> CreateOrder([FromBody] CreateOrderRequest request)
     {
-        var userExists = await _dbContext.Users.AnyAsync(u => u.Id == request.UserId);
-
-        if (!userExists)
-        {
-            return BadRequest($"User with ID {request.UserId} does not exist.");
-        }
-
+        Guid userId = Guid.Parse(User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)!.Value);
         var order = new Order
         {
-            UserId = request.UserId,
+            UserId = userId,
             JobId = request.JobId,
             Status = OrderStatus.CREATED.ToString(),
             OrderedAt = DateTime.UtcNow,
@@ -56,7 +54,18 @@ public class OrdersController : ControllerBase
         };
 
         _dbContext.Orders.Add(order);
-        await _dbContext.SaveChangesAsync();
+        
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError("An error occured creating new order. Reason: {}", ex.Message);
+            
+            return BadRequest();
+        }
+        
 
         return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
     }
