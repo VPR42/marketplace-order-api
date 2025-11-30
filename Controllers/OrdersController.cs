@@ -3,7 +3,6 @@ using MarketPlace.DTO;
 using MarketPlace.Models;
 using MarketPlace.Mappers;
 using MarketPlace.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -179,6 +178,7 @@ public class OrdersController : ControllerBase
 
         return order;
     }
+
     /// <summary>
     /// Метод возвращает последние 5 или меньше заказов для пользователя
     /// </summary>
@@ -196,6 +196,35 @@ public class OrdersController : ControllerBase
         return Ok(orders);
     }
 
+
+    /// <summary>
+    /// Метод возвращает список заказов текущего пользователя с фильтрами и пагинацией.
+    /// </summary>
+    /// <returns>JSON, содержащий список заказов и информацию о пагинации.</returns>
+    // ИЗМЕНЕНИЕ: Указываем возвращаемый тип с использованием новой DTO-обертки
+    [HttpGet]
+    public async Task<ActionResult<PagedResponseDto<UserOrderListDto>>> GetPagedOrdersForUser([FromQuery] OrderFilterParamsDto filterParams)
+    {
+        // РЕВЬЮ: Удалены все лишние проверки (string.IsNullOrEmpty, Guid.TryParse),
+        // так как Middleware гарантирует наличие валидного ID.
+
+        // 1. Извлечение ID пользователя и парсинг. Если ID невалиден, Guid.Parse() вызовет исключение (500 Internal Server Error), 
+        // что соответствует требованию не добавлять явные проверки 401 в контроллер.
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.Parse(userIdString);
+
+        var (orders, totalCount) = await _orderService.GetPagedUserOrdersAsync(userId, filterParams);
+
+        // 2. Формирование ответа с использованием PagedResponseDto
+        var response = new PagedResponseDto<UserOrderListDto>(
+            orders,
+            totalCount,
+            filterParams.PageNumber,
+            filterParams.PageSize
+        );
+        
+        return Ok(response);
+    }
     /// <summary>
     /// Получает заказ по его идентификатору.
     /// </summary>
@@ -229,12 +258,5 @@ public class OrdersController : ControllerBase
         return Ok(response);
     }
 
-    [HttpGet]
-    [Authorize]
-    [Route("test")]
-    public ActionResult<string?> Test()
-    {
-        var id = HttpContext.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-        return id;
-    }
+    // РЕВЬЮ: Временный метод [HttpGet("test-paged-orders")] полностью удален.
 }
