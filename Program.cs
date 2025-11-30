@@ -5,18 +5,21 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Serilog;
 using Steeltoe.Discovery.Client;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.Configure<RouteOptions>(options =>
-{
-    options.LowercaseUrls = true;
-});
+// настроить Serilog из appsettings.json
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+
+// сказать хосту использовать Serilog
+builder.Host.UseSerilog();
 
 builder.Services.AddDiscoveryClient(builder.Configuration);
-builder.Services.AddLogging();
 builder.Services.AddControllers();
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -27,6 +30,7 @@ builder.Services.AddScoped<OrderService>();
 
 builder.Services.AddAuthentication("custom")
     .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>("custom", options => { });
+
 builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMq"));
 builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublisher>();
 
@@ -54,11 +58,7 @@ app.UseSwagger(c =>
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/api/orders/docs/v1/swagger.json", "Marketplace Orders API v1");
-    app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/api/orders/docs/v1/swagger.json", "Marketplace Orders API v1");
     c.RoutePrefix = "api/orders/swagger";
-});
 });
 
 app.MapGet("/api/orders/docs", () =>
@@ -66,6 +66,7 @@ app.MapGet("/api/orders/docs", () =>
    .WithMetadata(new AllowAnonymousAttribute());
 
 app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
+
 app.UseMiddleware<GatewayUserMiddleware>();
 
 app.UseHttpsRedirection();
