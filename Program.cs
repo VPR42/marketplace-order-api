@@ -16,6 +16,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .CreateLogger();
 
+
 // сказать хосту использовать Serilog
 builder.Host.UseSerilog();
 
@@ -31,6 +32,10 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddAuthentication("custom")
     .AddScheme<AuthenticationSchemeOptions, HeaderAuthenticationHandler>("custom", options => { });
 
+builder.Services.Configure<RouteOptions>(options =>
+{
+    options.LowercaseUrls = true;
+});
 builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMq"));
 builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublisher>();
 
