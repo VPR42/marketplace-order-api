@@ -33,7 +33,7 @@ public class OrdersController : ControllerBase
     /// Создает новый заказ.
     /// </summary>
     /// <param name="request">Данные для создания заказа (идентификаторы пользователя и вакансии).</param>
-    /// <response code="201">Заказ успешно создан. В теле ответа — созданный заказ.</response>
+    /// <response code="200">Заказ успешно создан. В теле ответа — созданный заказ.</response>
     /// <response code="400">Пользователь не найден или переданы некорректные данные.</response>
     [HttpPost("create-order")]
     [SwaggerOperation(
@@ -65,18 +65,9 @@ public class OrdersController : ControllerBase
             
             return BadRequest();
         }
-        
 
-        return CreatedAtAction(nameof(GetOrderId), new { id = order.Id }, order);
-    }
 
-    // Нужен именно для создания
-    private async Task<ActionResult<Order>> GetOrderId(long id)
-    {
-        var order = await _dbContext.Orders.FindAsync(id);
-        if (order == null) return NotFound();
-
-        return order;
+        return Ok(order);
     }
 
     /// <summary>
