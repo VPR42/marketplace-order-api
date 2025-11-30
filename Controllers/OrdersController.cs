@@ -30,31 +30,6 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Создает новый заказ.
     /// </summary>
-    /// <remarks>
-    /// При успешном создании:
-    /// <list type="bullet">
-    ///   <item>
-    ///     <description>Заказ сохраняется в базе данных.</description>
-    ///   </item>
-    ///   <item>
-    ///     <description>
-    ///       В RabbitMQ (exchange <c>marketplace.orders</c>) публикуется событие
-    ///       с routing key <c>order.created</c>.
-    ///     </description>
-    ///   </item>
-    /// </list>
-    /// Пример тела события <c>order.created</c>:
-    /// <code>
-    /// {
-    ///   "type": "order_created",
-    ///   "orderId": 123,
-    ///   "userId": 10,
-    ///   "jobId": 5,
-    ///   "status": "CREATED",
-    ///   "orderedAt": "2025-11-29T10:15:00Z"
-    /// }
-    /// </code>
-    /// </remarks>
     /// <param name="request">Данные для создания заказа (идентификаторы пользователя и вакансии).</param>
     /// <response code="201">Заказ успешно создан. В теле ответа — созданный заказ.</response>
     /// <response code="400">Пользователь не найден или переданы некорректные данные.</response>
@@ -101,35 +76,6 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Изменяет статус заказа.
     /// </summary>
-    /// <remarks>
-    /// Логика:
-    /// <list type="bullet">
-    ///   <item>
-    ///     <description>Проверяется корректность нового статуса и допустимость перехода.</description>
-    ///   </item>
-    ///   <item>
-    ///     <description>Статус и время изменения статуса обновляются в базе данных.</description>
-    ///   </item>
-    ///   <item>
-    ///     <description>
-    ///       Если новый статус один из <c>COMPLETED</c> или <c>REJECTED</c>,
-    ///       в RabbitMQ (exchange <c>marketplace.orders</c>) публикуется событие
-    ///       с routing key <c>order.closed</c>.
-    ///     </description>
-    ///   </item>
-    /// </list>
-    /// Пример тела события <c>order.closed</c>:
-    /// <code>
-    /// {
-    ///   "type": "order_closed",
-    ///   "orderId": 123,
-    ///   "userId": 10,
-    ///   "jobId": 5,
-    ///   "status": "COMPLETED",
-    ///   "closedAt": "2025-11-29T11:00:00Z"
-    /// }
-    /// </code>
-    /// </remarks>
     /// <param name="id">Идентификатор заказа.</param>
     /// <param name="request">Новый статус заказа.</param>
     /// <response code="200">

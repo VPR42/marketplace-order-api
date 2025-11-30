@@ -42,10 +42,10 @@ builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublishe
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    c.SwaggerDoc("v3", new OpenApiInfo
     {
         Title = "Marketplace Orders API",
-        Version = "v1"
+        Version = "v3"
     });
 
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
