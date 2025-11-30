@@ -15,6 +15,10 @@ builder.Services.Configure<RouteOptions>(options =>
     options.LowercaseUrls = true;
 });
 
+builder.Services.Configure<RouteOptions>(options =>
+{
+    options.LowercaseUrls = true;
+});
 builder.Services.AddDiscoveryClient(builder.Configuration);
 builder.Services.AddLogging();
 builder.Services.AddControllers();
