@@ -12,7 +12,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace MarketPlace.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/orders")]
 public class OrdersController : ControllerBase
 {
     private readonly ApplicationDbContext _dbContext;
