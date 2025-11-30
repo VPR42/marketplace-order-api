@@ -101,4 +101,76 @@ public class OrdersController : ControllerBase
         var orders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
         return Ok(orders);
     }
+
+
+    /// <summary>
+    /// Метод возвращает список заказов текущего пользователя с фильтрами и пагинацией.
+    /// </summary>
+    /// <returns>JSON, содержащий список заказов и информацию о пагинации.</returns>
+    [HttpGet] // Используем базовый GET-путь
+    //[Authorize] // Оставляем, т.к. токен нужен
+    public async Task<IActionResult> GetPagedOrdersForUser([FromQuery] OrderFilterParamsDto filterParams)
+    {
+        // 1. Извлечение ID пользователя из токена
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        // Добавим проверку почты, как в рабочем методе, на всякий случай
+        var userEmail = User.FindFirstValue(ClaimTypes.Email);
+
+        // 2. ИСПОЛЬЗУЕМ ПАТТЕРН ИЗ РАБОТАЮЩЕГО ЭНДПОИНТА
+        if (string.IsNullOrEmpty(userIdString) || string.IsNullOrEmpty(userEmail))
+        {
+            // Явно возвращаем 401 Unauthorized
+            return Unauthorized("User ID not found in token or token is missing.");
+        }
+
+        // 3. Остальная логика (как было в предыдущем ответе)
+
+        if (!Guid.TryParse(userIdString, out var userId))
+        {
+            // Не смогли распарсить ID
+            return Unauthorized("Invalid user ID format in token.");
+        }
+
+        var (orders, totalCount) = await _orderService.GetPagedUserOrdersAsync(userId, filterParams);
+
+        // 4. Формирование ответа с метаданными для пагинации
+        var response = new
+        {
+            TotalCount = totalCount,
+            PageNumber = filterParams.PageNumber,
+            PageSize = filterParams.PageSize,
+            Orders = orders
+        };
+
+        return Ok(response);
+    }
+
+
+    /// <summary>
+    /// ВРЕМЕННЫЙ МЕТОД ДЛЯ ТЕСТИРОВАНИЯ БЕЗ АВТОРИЗАЦИИ.
+    /// Игнорирует ClaimsPrincipal и использует хардкод ID пользователя.
+    /// </summary>
+    // Если на контроллере или глобально есть [Authorize], используйте [AllowAnonymous].
+    [HttpGet("test-paged-orders")]
+    public async Task<IActionResult> GetTestPagedOrders([FromQuery] OrderFilterParamsDto filterParams)
+    {
+        // ЖЕСТКО ЗАДАННЫЙ ID ПОЛЬЗОВАТЕЛЯ для тестирования (Иван Запара)
+        var testUserId = new Guid("324c360f-c890-4def-be92-4a483ee0373d");
+
+        // Здесь мы полностью пропускаем все проверки User.FindFirstValue и Unauthorized()
+
+        // 1. Вызов сервиса с хардкод ID
+        var (orders, totalCount) = await _orderService.GetPagedUserOrdersAsync(testUserId, filterParams);
+
+        // 2. Формирование ответа с метаданными для пагинации
+        var response = new
+        {
+            TotalCount = totalCount,
+            PageNumber = filterParams.PageNumber,
+            PageSize = filterParams.PageSize,
+            Orders = orders
+        };
+
+        return Ok(response);
+    }
 }
