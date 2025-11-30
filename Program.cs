@@ -36,8 +36,6 @@ builder.Services.Configure<RouteOptions>(options =>
 {
     options.LowercaseUrls = true;
 });
-builder.Services.Configure<RabbitMqSettings>(builder.Configuration.GetSection("RabbitMq"));
-builder.Services.AddSingleton<IOrderEventsPublisher, RabbitMqOrderEventsPublisher>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
