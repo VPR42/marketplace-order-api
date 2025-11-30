@@ -7,7 +7,7 @@ public class OrderStatusService : IOrderStatusService
     private static readonly Dictionary<OrderStatus, OrderStatus[]> AllowedTransitions = new()
     {
         [OrderStatus.CREATED] = new[] { OrderStatus.WORKING, OrderStatus.CANCELLED, OrderStatus.REJECTED },
-        [OrderStatus.WORKING] = new[] { OrderStatus.COMPLETED },
+        [OrderStatus.WORKING] = new[] { OrderStatus.COMPLETED, OrderStatus.CANCELLED },
         [OrderStatus.COMPLETED] = Array.Empty<OrderStatus>(),
         [OrderStatus.CANCELLED] = Array.Empty<OrderStatus>(),
         [OrderStatus.REJECTED] = Array.Empty<OrderStatus>()
