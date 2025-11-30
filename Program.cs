@@ -62,12 +62,12 @@ app.UseSwagger(c =>
 
 app.UseSwaggerUI(c =>
 {
-    c.SwaggerEndpoint("/api/orders/docs/v1/swagger.json", "Marketplace Orders API v1");
+    c.SwaggerEndpoint("/api/orders/docs/v3/swagger.json", "Marketplace Orders API v1");
     c.RoutePrefix = "api/orders/swagger";
 });
 
 app.MapGet("/api/orders/docs", () =>
-        Results.Redirect("/api/orders/docs/v1/swagger.json"))
+        Results.Redirect("/api/orders/docs/v3/swagger.json"))
    .WithMetadata(new AllowAnonymousAttribute());
 
 app.MapGet("/actuator/health", () => Results.Ok(new { status = "UP" }));
