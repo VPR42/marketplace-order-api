@@ -121,25 +121,8 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Метод возвращает последние 5 или меньше заказов для пользователя
-    /// </summary>
-    /// <returns>JSON Содержащий информацию о заказах (Название заказа, стоимость заказа, когда заказан, и его статус) или Unauthorized</returns>
-    [HttpGet("get-last-orders")]
-    public async Task<IActionResult> GetLastOrders()
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var userEmail = User.FindFirstValue(ClaimTypes.Email);
-
-        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
-            return Unauthorized();
-
-        var orders = await _orderService.GetLastOrdersForUser(Guid.Parse(userId));
-        return Ok(orders);
-    }
-
-
-    /// <summary>
     /// Метод возвращает список заказов текущего пользователя с фильтрами и пагинацией.
+    /// Если передавать в поле статус заказа = null, то будут по умолчанию выводить все завершенные и отмененный заказы.
     /// </summary>
     /// <returns>JSON, содержащий список заказов и информацию о пагинации.</returns>
     // ИЗМЕНЕНИЕ: Указываем возвращаемый тип с использованием новой DTO-обертки
