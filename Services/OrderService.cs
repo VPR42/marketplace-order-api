@@ -80,16 +80,26 @@ public class OrderService
             // EF Core автоматически добавит JOIN'ы в SQL, необходимые для .Select().
             var query = _dbContext.Orders
                 // Фильтруем по ID текущего пользователя. Это ключевой элемент безопасности!
-                .Where(o => o.UserId == userId)
+                //.Where(o => o.UserId == userId)
                 .AsQueryable(); // Важно, чтобы это был IQueryable для построения запроса
+
+            // --- 0. ОПРЕДЕЛЕНИЕ ЧЬИ ЗАКАЗЫ МЫ ВЫВОДИМ
+            if (filterParams.isMasterOrder)
+            {
+                query = query.Where(o => userId == o.Job.MasterId);
+            }
+            else
+            {
+            query = query.Where(o => o.UserId == userId && o.UserId != o.Job.MasterId);
+            }
 
             // --- 1. ПРИМЕНЕНИЕ ФИЛЬТРОВ ---
 
             // Фильтр по статусу (например, Status=COMPLETED). Проверяем на пустую строку, а не на 'ВСЕ'.
             if (!string.IsNullOrWhiteSpace(filterParams.Status))
-            {
-                query = query.Where(o => o.Status == filterParams.Status.ToUpperInvariant());
-            }
+        {
+            query = query.Where(o => o.Status == filterParams.Status.ToUpperInvariant());
+        }
 
             // Фильтр по поисковой строке (Job.Name LIKE %search%)
             if (!string.IsNullOrWhiteSpace(filterParams.Search))

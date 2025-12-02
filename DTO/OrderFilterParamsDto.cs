@@ -16,5 +16,8 @@ namespace MarketPlace.DTO
         // Пагинация
         public int PageNumber { get; set; } = 0;
         public int PageSize { get; set; } = 10;
+
+        // Флаг на то, чьи заказы мы выводим
+        public bool isMasterOrder { get; set; } = false;
     }
 }
