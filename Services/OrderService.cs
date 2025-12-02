@@ -15,57 +15,6 @@ public class OrderService
         _dbContext = dbContext;
     }
 
-    public async Task<List<OrderResponse>> GetLastOrdersForUser(Guid userId)
-    {
-        var statuses = new[]
-        {
-            OrderStatus.COMPLETED.ToString(),
-            OrderStatus.REJECTED.ToString()
-        };
-
-        return await _dbContext.Orders
-            .AsNoTracking()
-            .Where(o => o.UserId == userId && statuses.Contains(o.Status))
-            .Include(o => o.User)
-                .ThenInclude(u => u.CityNavigation)
-            .Include(o => o.Job) 
-            .OrderByDescending(o => o.OrderedAt)
-            .Take(5)
-            .Select(o => new OrderResponse
-            {
-                Id = o.Id,
-                Status = o.Status,
-                OrderedAt = o.OrderedAt,
-                StatusChangedAt = o.StatusChangedAt,
-
-                User = new UserDto
-                {
-                    Id = o.User.Id,
-                    Surname = o.User.Surname,
-                    Name = o.User.Name,
-                    Patronymic = o.User.Patronymic,
-                    Email = o.User.Email,
-                    AvatarPath = o.User.AvatarPath,
-                    City = new CityDto
-                    {
-                        Id = o.User.CityNavigation.Id,
-                        Name = o.User.CityNavigation.Name,
-                        Region = o.User.CityNavigation.Region
-                    }
-                },
-                Job = new JobDto
-                {
-                    Id = o.Job.Id,
-                    Name = o.Job.Name,
-                    Description = o.Job.Description,
-                    Price = o.Job.Price,
-                    CoverUrl = o.Job.CoverUrl,
-                    CategoryId = o.Job.CategoryId
-                }
-            })
-            .ToListAsync();
-        }
-
 
         /// <summary>
         /// Выводит заказы пользователя с фильтрацией и пагинацией.
@@ -79,12 +28,12 @@ public class OrderService
             // 💡 Оптимизация: .Include() можно удалить, если вся выборка делается через .Select() (проецирование).
             // EF Core автоматически добавит JOIN'ы в SQL, необходимые для .Select().
             var query = _dbContext.Orders
+                .Include(o => o.Job)
                 // Фильтруем по ID текущего пользователя. Это ключевой элемент безопасности!
-                //.Where(o => o.UserId == userId)
                 .AsQueryable(); // Важно, чтобы это был IQueryable для построения запроса
 
             // --- 0. ОПРЕДЕЛЕНИЕ ЧЬИ ЗАКАЗЫ МЫ ВЫВОДИМ
-            if (filterParams.isMasterOrder)
+            if (filterParams.IsMasterOrder)
             {
                 query = query.Where(o => userId == o.Job.MasterId);
             }
@@ -96,17 +45,23 @@ public class OrderService
             // --- 1. ПРИМЕНЕНИЕ ФИЛЬТРОВ ---
 
             // Фильтр по статусу (например, Status=COMPLETED). Проверяем на пустую строку, а не на 'ВСЕ'.
+
+
             if (!string.IsNullOrWhiteSpace(filterParams.Status))
-        {
-            query = query.Where(o => o.Status == filterParams.Status.ToUpperInvariant());
-        }
+            {
+                query = query.Where(o => o.Status == filterParams.Status.ToUpperInvariant());
+            }
+            else
+            {
+                query = query.Where(o => o.Status == OrderStatus.COMPLETED.ToString() || o.Status == OrderStatus.CANCELLED.ToString());
+            }
 
             // Фильтр по поисковой строке (Job.Name LIKE %search%)
             if (!string.IsNullOrWhiteSpace(filterParams.Search))
-            {
-                // .Contains() в EF Core транслируется в SQL LIKE '%value%'
-                query = query.Where(o => o.Job.Name.Contains(filterParams.Search));
-            }
+        {
+            // .Contains() в EF Core транслируется в SQL LIKE '%value%'
+            query = query.Where(o => o.Job.Name.Contains(filterParams.Search));
+        }
 
             // НОВЫЙ ФИЛЬТР: ПО КАТЕГОРИИ (используем int?, чтобы проверить на наличие значения)
             if (filterParams.CategoryId.HasValue)
