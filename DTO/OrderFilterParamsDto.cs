@@ -18,6 +18,7 @@ namespace MarketPlace.DTO
         public int PageSize { get; set; } = 10;
 
         // Флаг на то, чьи заказы мы выводим
-        public bool isMasterOrder { get; set; } = false;
+        public bool IsMasterOrder { get; set; } = false;
+
     }
 }
